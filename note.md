@@ -8,6 +8,14 @@
   > - 超文本标记语言/HyperText Markup Language
   > - 用标签代替语意
   > - head标签：页面配置信息
+  > - 元素
+  >   - 标签加内容
+  >   - 内联元素：不独占一行，无法定义宽高
+  >   - 块级元素：独占一行，可以定义宽高
+  >   - 行内块元素：不独占一行，可以定义宽高
+  >   - 内联元素可以嵌套内联元素
+  >   - 块级元素可以嵌套任何元素
+  >   - p标签不能嵌套div标签
   ```html
     <!DOCTYPE html>
      html5的声明
@@ -39,6 +47,15 @@
       <ins>ins</ins>
       <address>addrress斜体</address>
       <em>元素内部字体大小 * 1<em>
+      <div>
+        中文自动换行
+        英文无分割时不换行
+      </div>
+      <a href="www.baidu.com" target="_blank">百度</a>
+      <a href="tel:1234567890">移动端打电话</a>
+      <a href="mailto:xxx@qq.com">发邮件</a>
+      <a href="#id">锚点定位：定位到某元素</a>
+      <a href="javascript:;">协议限定符</a>
      </body>
     </html>
   ```
