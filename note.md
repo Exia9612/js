@@ -152,3 +152,71 @@
       </body>  
     </html>
   ```
+  > form表单标签
+  > - block element
+  > - input
+  >   - inline blobk
+  >   - disabled(不可读不可写)和readonly(只读不可写)的区别在于提交表单提交时数据能否读取
+  > - label标签
+  >   - for属性与某一个input的id属性相同时，点击label自动聚焦该input输入框
+  > - textarea标签
+  >   - 通常宽度计算公式：8px(英文字符) * cols + 17px(滚动条)
+  >   - 中间不应该有空格和换行，会被视为textare的内容
+  > - placeholder不同浏览器中样式不一，同时难以调整样式。对于样式要求严格的需求讲义用js模拟
+  placeholder
+  > - fieldset和legend标签
+  >   - 块级元素
+  >   - 分割表单
+  ```html
+    <!DOCTYPE html>
+    <html lang="zh-CHS">
+      <head>
+        <meta charset="UTF-8" />
+        <title>
+          frameset标签
+        </title>
+      </head>
+      <body>
+        <form method="get|post" action="url">
+          <p>
+            username: <input type="text" name="username" value="isaac" maxlength=5/>
+          </p>
+          <p>
+            password: <input type="password" name="password" value=""/>
+          </p>
+          <p>
+            <input type="submit" value="submit"/>
+          </p>
+        </form>
+
+        <form>
+          <label for="usename"></label>
+          <input type="text" id="username"/>
+        <form>
+
+        <form method="get|post" action="url">
+          <p>
+            username: <input type="text" name="username" value="isaac" disabled="disabled"/>
+          </p>
+          <p>
+            <input type="text" value="cheng" readonly="readonly"/>
+          </p>
+        </form>
+
+        <form>
+          <input type="radio" name="sex" checked="checked" value="male" id="male"/>
+          <label for="male">男士</label>
+          <input type="radio" name="sex" checked="checked" value="female" id="female"/>
+          <label for="female">女士</label>
+        </form>
+
+        <form>
+          <textarea cols="30" rows="20"></textarea>
+        </form>
+      </body>  
+    </html>
+  ```
+  > 总结
+  > - 块级元素标签：div hx p address ul ol li dl dt dd table form field legend
+  > - 内联元素标签：span strong em del ins label a sub sup
+  > - 内联块元素：input img select textaarea iframe
