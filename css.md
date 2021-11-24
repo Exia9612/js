@@ -1,4 +1,4 @@
-#浏览器
+# 浏览器
 ## 大型浏览器
 >  - google chrome webkit/blink
 >  - safari webkit
@@ -8,7 +8,9 @@
 ## 内核
 > - 渲染引擎
 > - JS解析引擎(V8最快)
-#css(cascading style sheet 层叠样式表)
+## 渲染过程
+![Image text](./img/brower.png)
+# css(cascading style sheet 层叠样式表)
 ## 语法
 > 选择器: {
 >   属性名: 属性值
