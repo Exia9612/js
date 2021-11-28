@@ -160,3 +160,158 @@
       </body>  
     </html>
 ```
+#### width min-width max-width
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style type="text/css">
+        div {
+            width: 100%;
+            /* 小于该宽度时自动换行 */
+            min-width: 1440px;
+            /* 超过该宽度不在延长 */
+            max-width: 1600px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div>11111111111111111111111111111111111111111111</div>
+</body>
+</html>
+```
+#### height min-height max-height overflow
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style type="text/css">
+        div {
+            width: 100%;
+            /* 最小高度 */
+            min-height: 1440px;
+            /* 超过该高度不在延长 */
+            max-height: 1600px;
+            font-size: 16px;
+            /* 溢出部分隐藏 */
+            /* overflow: hidden; */
+            /* 添加滚动条无论是否溢出, 滚动条宽度17p且占用盒子内宽度 */
+            overflow: scroll;
+            /* 溢出时添加滚动条 */
+            overflow: auto;
+        }
+    </style>
+</head>
+<body>
+    <div>11111111111111111111111111111111111111111111</div>
+</body>
+</html>
+```
+#### font-size font-weight font-style font-family color
+> - font-size
+>   - 浏览器默认字体大小16px 
+>   - 字体大小设置的是高度，宽度是自动缩放的
+> - font-weight
+>   - 粗细并不随数字大小逐渐改变，仅在超过某些阈值时改变
+>   - ligter normal bold bolder(不适用于所有字体)
+> - font-style
+>   - font-style: italic (斜体，适用有斜体的字体)
+>   - font-style: oblique (倾斜，适用所有字体)
+> - font-family
+>   - arial通用字体，win和mac都安装的字体
+#### border
+> - 占据可视宽度
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style type="text/css">
+        div {
+            width: 0px;
+            height: 0px;
+            border-width: 100px;
+            border-style: solid;
+            /* 向右的三角形 */
+            border-color: transparent ;
+            border-left-color: wheat;
+        }
+    </style>
+</head>
+<body>
+    <div></div>
+</body>
+</html>
+```
+#### 对齐
+> - 针对有宽高的容器
+> - text-align: left center right
+> - line-height，默认22px
+> - text-indent(文本缩进)
+#### em
+> - 相对大小，对应容器内字体大小的倍数
+> - line-height: 1.2em设置行高为基础的1.2倍
+#### cursor
+> - 光标显示
+```css
+  cursor: pointer | not-allowed ...
+```
+#### 单行文本截断和显示省略号
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style type="text/css">
+        div {
+            width: 200px;
+            height: 22px;
+            border: 1px solid #000;
+            /* 不换行 */
+            white-space: nowrap;
+            overflow: hidden;
+            /* 隐藏部分加省略号 */
+            text-overflow: ellipsis;
+        }
+    </style>
+</head>
+<body>
+    <div>
+      <span></span>
+    </div>
+</body>
+</html>
+```
+#### display
+> - 控制元素显示：block inline-block inline
+> - 注意内联和内联块级元素的空格和换行会被转换为文本分隔符
+### 伪类选择器
+#### hover
+> - 控制鼠标悬浮时的样式
+```css
+div:hover {
+  background-color: #333;
+}
+```
+#### disbaled
+> - 设置禁用时的样式
+```css
+div:disabled {
+  background-color: #333;
+}
+```
