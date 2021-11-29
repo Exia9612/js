@@ -300,6 +300,98 @@
 #### display
 > - 控制元素显示：block inline-block inline
 > - 注意内联和内联块级元素的空格和换行会被转换为文本分隔符
+> display: none和visiblity: hidden的区别
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style type="text/css">
+        .box1 {
+            width: 200px;
+            height: 200px;
+            background-color: blue;
+            /* 保留在文档中占据的位置 */
+            visibility: hidden;
+            /* 不保留文档中的位置 */
+            display: none;
+        }
+
+        .box2 {
+          width: 200px;
+            height: 200px;
+            background-color: purple;
+        }
+    </style>
+</head>
+<body>
+    <div class="box1"></div>
+    <div class="box2"></div>
+</body>
+</html>
+```
+> - 多行文本垂直居中
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style type="text/css">
+      div {
+        display: table;
+        width: 100px;
+        height: 100px;
+        border: 1px solid black;
+      }
+
+      span {
+        display: table-cell;
+        vertical-align: middle;
+      }
+  </style>
+</head>
+<body>
+  <div class="box1">
+    <span>111111111111111111111111111111111111111111111111</span>
+  </div>
+</body>
+</html>
+```
+
+#### vertical-align
+> - 解决行内块和行内元素文本对齐
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style type="text/css">
+      .block {
+        display: inline-block;
+        width: 150px;
+        height: 150px;
+        border: 1px solid black;
+        /* top|middle|bottom|px */
+        vertical-align: top;
+      }
+  </style>
+</head>
+<body>
+    <span class="block">123</span>
+    <span>123</span>
+</body>
+</html>
+```
+
 ### 伪类选择器
 #### hover
 > - 控制鼠标悬浮时的样式
@@ -314,4 +406,155 @@ div:hover {
 div:disabled {
   background-color: #333;
 }
+```
+#### checked
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style type="text/css">
+        .checkbox {
+            width: 40px;
+            height: 40px;
+            border: 1px solid black;
+        }
+
+        .checkbox label {
+            display: block;
+            width: 20px;
+            height: 20px;
+            margin: 10px;
+            background-color: #000;
+            opacity: 0;
+            /* 兼容IE */
+            filter: alpha(opacity=0);
+        }
+
+        .checkbox input[type="checkbox"] {
+          display: none;
+        }
+
+        /* 相邻兄弟选择器：同父级 相邻 在其之后 */
+        .checkbox input[type="checkbox"]:checked + label {
+          opacity: 100;
+          /* 兼容IE */
+          filter: alpha(opacity=100);
+        }
+    </style>
+</head>
+<body>
+    <div class="checkbox">
+      <input type="checkbox" id="checkbox"/>
+      <label for="checkbox"></label>
+    </div>
+</body>
+</html>
+```
+#### focus
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style type="text/css">
+        input {
+          outline: none;
+        }
+
+        input:focus {
+          border: 1px solid green;
+        }
+    </style>
+</head>
+<body>
+    <input type="text" />
+</body>
+</html>
+```
+#### first-child last-child
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style type="text/css">
+        div span:first-child {
+          color: red;
+        }
+
+        div span:last-child {
+          color: red;
+        }
+    </style>
+</head>
+<body>
+    <div>
+      <span>123<span>
+      <span>123<span>
+      <span>123<span>
+      <span>123<span>
+      <span>123<span>
+    </div>
+</body>
+</html>
+```
+#### nth-child
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style type="text/css">
+      table {
+        width: 300px;
+      }
+
+      table tr:nth-child(even) {
+        background-color: #efefef;
+      }
+    </style>
+</head>
+<body>
+    <table>
+      <tr>
+        <td>1</td>
+        <td>1</td>
+        <td>1</td>
+      </tr>
+      <tr>
+        <td>1</td>
+        <td>1</td>
+        <td>1</td>
+      </tr>
+      <tr>
+        <td>1</td>
+        <td>1</td>
+        <td>1</td>
+      </tr>
+      <tr>
+        <td>1</td>
+        <td>1</td>
+        <td>1</td>
+      </tr>
+      <tr>
+        <td>1</td>
+        <td>1</td>
+        <td>1</td>
+      </tr>
+    </table>
+</body>
+</html>
 ```
