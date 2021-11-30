@@ -49,6 +49,24 @@
 > 选择器: {
 >   属性名: 属性值
 > }
+
+## 盒子模型
+> - 宽高 + 内边距 + 边框 + 外边距
+> - 可是区域： 宽高 + 内边距 * 2 + 边框 * 2
+> - body自带margin(其它：8px，IE7：16px 11px, IE8: 16px 8px)
+> - 改变可视区域的写法
+```css
+box-sizing: border-box ｜ content-box;
+/* firefox */
+-moz-box-sizing: border-box;
+/* chrome 低版本safari */
+-webkit-box-sizing: border-box;
+/* IE8以下 */
+-ms-box-sizing: border-box;
+/* 内核为presto */
+-o-box-sizing: border-box;
+```
+
 ## 类型
 ### 权重
 > 内联样式 > 内部样式表 > 外部样式表
@@ -555,6 +573,75 @@ div:disabled {
         <td>1</td>
       </tr>
     </table>
+</body>
+</html>
+```
+
+### 定位
+#### 绝对定位
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style type="text/css">
+        .box1 {
+          /* 绝对定位之后，元素在新建图层上 */
+          position: absolute;
+          left: 10px;
+          top: 20px;
+          width: 100px;
+          height: 100px;
+          background-color: green:
+        }
+
+        .box2 {
+          width: 200px;
+          height: 200px;
+          background-color: orange:
+        }
+    </style>
+</head>
+<body>
+    <div class="box1"></div>
+    <div class="box2"></div>
+</body>
+</html>
+```
+
+#### 相对定位
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style type="text/css">
+        .box1 {
+          /* 相对定位现对于自身原本的位置，定位之后，元素也在新建图层但保留原涂层的位置 */
+          position: relative;
+          left: 10px;
+          top: 20px;
+          width: 100px;
+          height: 100px;
+          background-color: green:
+        }
+
+        .box2 {
+          width: 200px;
+          height: 200px;
+          background-color: orange:
+        }
+    </style>
+</head>
+<body>
+    <div class="box1"></div>
+    <div class="box2"></div>
 </body>
 </html>
 ```
