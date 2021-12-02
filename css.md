@@ -645,3 +645,238 @@ div:disabled {
 </body>
 </html>
 ```
+
+#### 定位的两栏设计
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style type="text/css">
+        html, body {
+          height: 100%;
+          margin: 0;
+          overflow-y: hidden;
+        }
+
+        .left {
+          margin-right: 300px;
+          height: 100%;
+          background-color: green;
+        }
+
+        .right {
+          position: absolute;
+          right: 0;
+          top: 0;
+          width: 300px;
+          height: 100%;
+          background-color: orange;
+        }
+    </style>
+</head>
+<body>
+    <div class="left"></div>
+    <div class="right"></div>
+</body>
+</html>
+```
+
+### 浮动
+> - 浮动元素不新建图层
+> - 和绝对定位一样，浮动元素只会影响后面元素的布局
+> - float之后块级元素变成内联块
+> - 块级元素无法识别浮动元素的位置
+> - 内联、内联块、浮动元素、溢出隐藏元素和纯文本可以识别浮动元素位置
+#### 清除浮动
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style type="text/css">
+        html, body {
+          height: 100%;
+          margin: 0;
+          overflow-y: hidden;
+        }
+
+        .box {
+          width: 600px;
+          height: 100px;
+          border: 10px solid #000;
+        }
+
+        .left {
+          margin-right: 300px;
+          width: 300px;
+          height: 100px;
+          background-color: green;
+        }
+
+        .right {
+          width: 300px;
+          height: 100px;
+          background-color: orange;
+        }
+
+        .clearfix {
+          /* 必须在块级元素下才能清除元素 */
+          clear: both;
+        }
+    </style>
+</head>
+<body>
+  <div class="box">
+    <div class="left"></div>
+    <div class="right"></div>
+    <p class="clearfix"></p>
+  </div>
+</body>
+</html>
+```
+
+### 伪元素和伪类
+> - 一个冒号开头
+> - :before :after
+> - 必须带有content属性 
+> - ::伪元素
+> - 伪元素是内联元素
+> - before在较低图层，after在较高图层
+ ```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style type="text/css">
+        p:before {
+          content: 'I';
+        }
+
+        p:after {
+          content: 'iron man';
+        }
+    </style>
+</head>
+<body>
+  <p>am</p>
+</body>
+</html>
+```
+> - 利用伪元素清除伪类
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style type="text/css">
+        ul::after, div::after {
+            content: "";
+            /* 
+                块级元素才能清除浮动
+                after伪元素会放到父级元素的末尾
+            */
+            display: block;
+            clear: both;
+        }
+
+        .box {
+            width: 200px;
+            border: 1px solid #000;
+        }
+
+        .box1 {
+            float: left;
+            width: 100px;
+            height: 100px;
+            background-color: green;
+        }
+
+        .box2 {
+            float: left;
+            width: 100px;
+            height: 100px;
+            background-color: orange;
+        }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <div class="box1"></div>
+        <div class="box2"></div>
+    </div>
+</body>
+</html>
+```
+> - 利用伪类传递数据
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style type="text/css">
+        p:before {
+          content: attr(data-username)
+        }
+    </style>
+</head>
+<body>
+    <p data-username="isaac">, welcome</p>
+</body>
+</html>
+```
+
+### box-shadow
+> - box-shadow: 水平位置(必填) 垂直位置(必填) 模糊距离 阴影尺寸 阴影颜色 阴影种类
+> - 水平偏移(默认往左) 垂直偏移(默认往下)控制阴影在x y 轴的水平偏移量
+> - 模糊距离控制阴影的清晰度
+> - 阴影尺寸：在阴影为偏移时扩展阴影
+> - 不占据文档流空间，所以可能会侵占其它元素的空间，可以给附近元素添加相对定位解决
+```css
+box {
+  position: relative;
+  z-index: 2;
+}
+```
+
+### logo写法
+> - 常用background-color，有缓存机制
+> - img 每一次加载都需要请求，对弱网环境不友好
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style type="text/css">
+        p:before {
+          content: attr(data-username)
+        }
+    </style>
+</head>
+<body>
+    <div class="logo">
+      <h1>
+        <a href=""></a>
+      </h1>
+    </div>
+</body>
+</html>
+```
