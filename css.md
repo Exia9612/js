@@ -861,22 +861,284 @@ box {
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <style type="text/css">
-        p:before {
-          content: attr(data-username)
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style type="text/css">
+    /* 通过content-box,内边距独立与宽高之外来处理css加载不出时，logo显示问题 */
+    h1 {
+      margin: 0;
+    }
+
+    .logo {
+      width: 142px;
+      height: 58px;
+      border: 1px solid #000000;
+    }
+
+    .logo h1 .logo-hd {
+      display: block;
+      width: 142px;
+      height: 0;
+      padding-top: 58px;
+      background: url(img/logo.png) no-repeat 0 0/142px 58px;
+      overflow: hidden;
+    }
+  </style>
 </head>
 <body>
-    <div class="logo">
-      <h1>
-        <a href=""></a>
-      </h1>
-    </div>
+  <div class="logo">
+    <h1>
+      <a href="" class="logo-hd">logo</a>
+    </h1>
+  </div>
 </body>
 </html>
 ```
+
+### table的一些写法
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style type="text/css">
+    table {
+      width: 300px;
+      height: 300px;
+      /* 单元格没有边框 */
+      border: 1px solid #000;
+      caption-side: bottom;
+      /* 合并边框 */
+      border-collapse: collapse;
+      /* 固定单元格 */
+      table-layout: fixed;
+    }
+
+    table tr td:nth-child(2) {
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <caption>测试表格</caption>
+  <table border="1">
+    <tr>
+      <td>1</td>
+      <td>2</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>5</td>
+      <td>6</td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>8</td>
+      <td>9</td>
+    </tr>
+  </table>
+</body>
+</html>
+```
+
+### ul模拟表格
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style type="text/css">
+    ul {
+      padding: 0;
+      margin: 0;
+      list-style: none;
+    }
+
+    .clearfix::after {
+      content: "";
+      display: block;
+      clear: both;
+    }
+
+    /* .table {
+      width: 300px;
+    } */
+
+    /* .table li {
+      float: left;
+      width: 101px;
+      height: 101px;
+      margin: -1px 0 0 -1px;
+      border: 1px solid #000;
+      box-sizing: border-box;
+    } */
+
+    .table {
+      width: 300px;
+      border-right: 1px solid #000;
+      border-bottom: 1px solid #000;
+    }
+
+    .table li {
+      float: left;
+      width: 100px;
+      height: 100px;
+      border-top: 1px solid #000;
+      border-left: 1px solid #000;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <ul class="table clearfix">
+    <li></li>
+    <li></li>
+    <li></li>
+    <li></li>
+    <li></li>
+    <li></li>
+    <li></li>
+    <li></li>
+    <li></li>
+  </ul>
+</body>
+</html>
+```
+
+## BFC
+> - block formatting context(块级元素上下文)
+> - 普通流(normal flow)
+> - 浮动流(float) 脱离普通流
+> - 绝对定位(absolute positioning) 脱离文档流，位于新图层
+> - bfc解决css一些问题
+> - 成为bfc元素的必要条件
+>> - body float position(fixed absolute)
+>> - display: flex inline-block table-cell
+>> - overflow: hidden auto scroll
+### 外边距合并
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style type="text/css">
+    .container {
+      /* bfc元素解决外边距塌陷的问题 */
+      overflow: hidden;
+    }
+
+    .box {
+      width: 100px;
+      height: 100px;
+    }
+
+    .box1 {
+      background-color: green;
+      margin-bottom: 100px;
+    }
+
+    .box2 {
+      margin-top: 100px;
+      background-color: orange;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="box box1"></div>
+  </div>
+  <div class="container">
+    <div class="box box2"></div>
+  </div>
+</body>
+</html>
+``` 
+
+### 浮动高度塌陷
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style type="text/css">
+    .box {
+      /* bfc撑开盒子高度 */
+      position: fixed;
+      width: 200px;
+      border: 10px solid #000 ;
+    }
+
+    .box1 {
+      float: left;
+      width: 100px;
+      height: 100px;
+      background-color: green;
+    }
+
+    .box2 {
+      float: left;
+      width: 100px;
+      height: 100px;
+      background-color: orange;
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="box1"></div>
+    <div class="box2"></div>
+  </div>
+</body>
+</html>
+```
+
+### 内边距塌陷
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style type="text/css">
+    .box1 {
+      width: 300px;
+      height: 300px;
+      background-color: black;
+      overflow: hidden;
+    }
+
+    .box2 {
+      width: 100px;
+      height: 100px;
+      margin: 0 auto;
+      /* 父级元素会受影响 */
+      margin-top: 100pc;
+      background-color: orange;
+    }
+  </style>
+</head>
+<body>
+  <div class="box1">
+    <div class="box2"></div>
+  </div>
+</body>
+</html>
+```
+
+### 浮动元素覆盖
+
+## css 属性书写顺序
+> - 显示属性：display position float clear
+> - 自身属性：width height margin padding border background
+> - 文本属性：color font text-align vertical-align whitespace
