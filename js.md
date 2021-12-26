@@ -108,3 +108,178 @@ document.write(sum); // '7'
   > - 引用值被赋值给另一个变量是赋值的其地址
 
 ![Image text](./img/内存.png)
+
+## 显示转换与隐示转换
+### 显示类型转换
+#### Number()
+布尔值：true为1，false为0
+数值：直接返回
+null：返回0
+undefined：返回NaN
+字符串:
+>  字符串是数值字符，返回十进制数字
+> 有效的浮点值格式，转换为浮点值
+> 有效的十六进制格式，转换为对应的十进制数字
+> 空字符串返回0
+> 其它情况返回NaN
+```javascript
+console.log(Number('123'));     // 123
+console.log(Number('1s'));      // NaN
+console.log(Number(true));      // 1
+console.log(Number('12.3'));    // 12.3
+console.log(Number(null));      // 0
+console.log(Number(undefined)); // NaN
+```
+
+#### parseInt(string, radix)
+将数字转换为整数
+字符串最前面的空格会被忽略，从第一个非空格字符串开始转换
+如果第一个字符不是数值字符，加号或减号，parseInt返回NaN
+若第一个字符是数值字符，加号或减号，则继续往后检查每个字符，直到字符串末尾或遇到非数值字符
+```javascript
+console.log(parseInt('12.3'));    // 12
+console.log(parseInt('123str'));  // 123
+console.log(parseInt('str123'));  // NaN
+console.log(parseInt(null));      // NaN
+console.log(parseInt(undefined)); // NaN
+console.log(parseInt(true));      // NaN
+console.log(parseInt('a', 16));   // 10
+console.log(parseInt('')); 				// NaN
+```
+
+#### parseFloat(string)
+将字符串转换为浮点数(只解析十进制)
+解析到字符串末尾或第一个无效字符
+第一次出现的小数点有效，第二次无效，剩余字符串被忽略
+忽=忽略开头的0字符
+```javascript
+parseFloat('1234bb'); 				// 1234
+parseFloat('0xA');						// 0
+parseFloat('22.5');						// 22.5
+parseFloat('22.34.5');				// 22.34
+parseFloat('0908.5');					// 908.5
+var sum = parseFloat('3.1415926');
+console.log(sum.toFixed(2)); // 四舍五入
+```
+
+#### String()
+null undefined没有toString(radix)方法
+
+#### Boolean()
+null undefined 0 '' NaN false为假，其余为真
+
+### 隐示类型转换
+#### ++ -- + - * / %
+如果有不是数值的操作数则调用Number转为为数值
+```javascript
+var a = '123';
+// Number(a)
+a++;
+console.log(a); // 124
+var b = '3' * 2;
+console.log(b); // 6
+```
+#### 比较运算符
+undefined null 既不等于0，也不大于0或小于0
+null == undefined
+null !=== undefined
+```javascript
+var c = '1' > 2;    // Number('1')
+console.log(c);			// false
+var d = 'a' > 'b';  // 按位比较ASCII码
+console.log(d); // false
+// 2 > 1  			true
+// true > 3 		Number(true) -> 1
+// 1 > 3  			false
+var a = 2 > 1 > 3;
+console.log(a); // false
+```
+
+#### isNaN(value)
+会为value调用Number方法，然后判断
+```javascript
+console.log(isNaN(NaN));       // true
+console.log(isNaN(undefined)); // true
+console.log(isNaN(null));      // false
+console.log(isNaN(37));        // false
+console.log(isNaN('37'));      // false
+console.log(isNaN(false));     // false
+console.log(isNaN('abc'));     // true
+```
+
+## 函数
+### 函数基础与种类
+1. 函数作用：功能的封装，解耦合
+2. 函数名命名规则与变量命名规则相同
+3. 定义语法
+```javascript
+  // 函数声明
+  function name(arg1, arg2) {}
+  // 函数表达式
+  var name = function(arg1, arg2) {}
+```
+```javascript
+  var test = function test1() {
+    var a = 1
+        b = 2
+    // 函数内部可以调用test1
+    console.log(a, b) // test1
+  }
+  // 如果是匿名函数，则打印test
+  console.log(test.name) // test1
+```
+### 形参与实参
+1. 形参：函数定义时携带的参数
+2. 实参：函数被调用时携带的参数
+3. 形参个数与实参个数可以不相等
+```javascript
+  function test(a, b) {
+    // 函数形参个数
+    console.log(test.length)
+    // 函数实参个数
+    console.log(arguments.length)
+  }
+  test(1, 2, 3)
+```
+
+### arguments
+1. 类数组对象
+2. 存储实参列表
+3. 存储的值与传入的实参不是同一个值，但与传入的实参值有映射关系
+```javascript
+function test(a, b, c) {
+  a = 3;
+  c = 5;
+  console.log(arguments[0]); // 3
+  console.log(arguments[2]); // undefined
+}
+test(1, 2);
+```
+
+### 函数作用域
+1. es5中作用域分为全局作用域与函数作用域
+2. 在函数内通过var定义的变量只能在函数内部生效，函数被销毁时这些变量也会销毁
+```javascript
+// 全局变量
+a = 1;
+function test1() {
+  // 局部变量
+  var b = 2;
+  console.log(a, b);	// 1 2
+  // 重新赋值全局变量a    a -> 4
+  a = 4;
+
+  function test2() {
+    // 局部变量
+    var c = 3;
+    // 重新赋值test1内的变量b   b -> 5
+    b = 5;
+    console.log(b);		// 5
+  }
+  test2();
+  // test2函数运行完时局部变量c被销毁
+  console.log(c); // ReferenceError
+}
+
+test1();
+```
