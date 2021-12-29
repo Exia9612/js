@@ -179,6 +179,60 @@ console.log(a); // 124
 var b = '3' * 2;
 console.log(b); // 6
 ```
+```javascript
+// Number(false) -> 0 
+var a = false + 1;
+console.log(a); // 1
+
+//----------------------------------
+
+// Number(false) -> 0
+var b = false == 1;
+console.log(b); // false
+
+//------------------------------------
+
+/**
+ * typeof(a) -> 'undefined'
+ * (-true) -> Number(-true) -> -1
+ * (+undefined) -> Number(+undefined) -> NaN
+ * -1 + NaN + '' -> 'NaN'
+ * 'undefined' && 'NaN' -> 'NaN'
+ * Boolean('NaN') -> true
+ */
+if (typeof(a) && (-true) + (+undefined) + '') {
+  console.log('通过了'); // 执行
+} else {
+  console.log('没通过');
+}
+
+//-----------------------------------------------------------------
+
+/**
+ * 5 * '3' -> 5 * Number('3') -> 15
+ * 1 + 15 === 16 -> true
+ */
+if (1 + 5 * '3' === 16) {
+  console.log('通过了'); // 执行
+} else {
+  console.log('未通过');
+}
+
+//----------------------------------------------------------------
+
+/**
+ * Boolean(' ') -> true
+ * Boolean(') -> false
+ * Boolean(false) -> false
+ * true + false - false || '通过了'
+ * Number(true) + Number(false) - Number(false) || '通过了'
+ * 1 + 0 - 0 || '通过了'
+ * 1 || '通过了'
+ * 1
+ */
+console.log(!!' ' + !!'' - !!false || '通过了'); // 1``
+```
+
 #### 比较运算符
 undefined null 既不等于0，也不大于0或小于0
 null == undefined
@@ -282,4 +336,301 @@ function test1() {
 }
 
 test1();
+```
+
+### 参数默认值
+- 没有传入实参时，形参默认为undefined
+- ES6后允许在函数定义时为参数设置默认值
+```javascript
+function test(a = 1, b) {
+  console.log(a); // 1
+  console.log(b); // undefined
+}
+test();
+```
+- 设置默认值的方法
+```javascript
+function test1(a, b) {
+  var a = arguments[0] || 2;
+  var b = arguments[1] || 3
+  console.log(a + b);
+}
+test(); // 5
+
+function test2(a, b) {
+  var a = typeof(arguments[0]) === 'undefined' ? 2 : arguments[0];
+  var b = typeof(arguments[1]) === 'undefined' ? 3 : arguments[1];
+  console.log(a + b);
+}
+test2(); // 5
+```
+
+## 预编译与AO GO
+### GO预编译步骤
+1. 寻找变量声明并提升
+2. 找函数声明并赋值
+3. 执行函数
+### 函数预编译步骤
+1. 寻找形参并未形参做变量声明
+2. 寻找变量声明并提升
+3. 为形参赋实参值
+4. 找函数声明并赋值
+5. 执行函数
+```javascript
+/**
+ * AO = {
+ *  a : undefined -> 2 -> function a() {} -> 1
+ *  b : undefined -> function() {}
+ *  d : function d() {}
+ * }
+ */
+function test(a) {
+  console.log(a); // function a() {}
+  var a = 1;
+  console.log(a); // 1
+  function a() {}
+  console.log(a); // 1
+  var b = function() {}
+  console.log(b); // function() {}
+  function d() {}
+}
+
+test(2);
+
+//-------------------------------------------------------------
+
+/**
+ * AO = {
+ *  a : undefined -> 1 -> 5
+ *  b : undefined -> function b(){} -> 6
+ *  c : undefined -> 0
+ *  d : function d(){}
+ * }
+ */
+function test(a, b) {
+  console.log(a); // 1
+  c = 0;
+  var c;
+  a = 5;
+  b = 6;
+  console.log(b); // 6
+  function b(){}
+  function d(){}
+  console.log(b); // 6
+}
+
+test(1);
+
+//-----------------------------------------------------------------
+
+/**
+ * GO = {
+ *  a : undefinded -> function a() {} -> 2
+ * }
+ */
+var a = 2;
+function a() {
+  console.log(2);
+}
+
+console.log(a); // 2
+
+//---------------------------------------------------------------
+
+/**
+ * GO = {
+ *  b : undefined	-> function() {}
+ *  a : function a() {}
+ * }
+ */
+console.log(a, b);	// function a() {}  undefined
+function a() {}
+var b = function() {};
+
+//--------------------------------------------------------------
+
+/**
+ * GO = {
+ *  test: function (){...}
+ *  b: 1
+ * }
+ * 
+ * AO = {
+ *  a : undefined -> 1
+ * }
+ */
+
+function test() {
+  var a = b = 1;
+  console.log(a); // 1
+}
+
+test();
+
+//--------------------------------------------------------
+
+/**
+ * GO = {
+ *  b : undefined -> 3
+ *  a : function a(a) {}
+ * }
+ * 
+ * AO = {
+ *  a : undefined -> 1 -> function a() {} -> 2
+ *  b : undefined -> 5
+ * }
+ */
+var b = 3;
+console.log(a); // function a(a) {}
+function a(a) {
+  console.log(a); // function a() {}
+  var a =2;
+  console.log(a); // 2
+  function a() {}
+  var b = 5;
+  console.log(b); // 5
+}
+
+a(1);
+
+//--------------------------------------------------------
+
+/**
+ * GO = {
+ *  a : undefined -> 1
+ *  test : function test() {}
+ * }
+ * 
+ * AO = {
+ *  a : undefined - > 2 -> 3
+ * }
+ */
+a = 1;
+function test() {
+  console.log(a); // undefined
+  a = 2;
+  console.log(a); // 2
+  var a = 3;
+  console.log(a); // 3
+}
+
+test();
+var a;
+
+//-------------------------------------------------------------
+
+/**
+ * GO = {
+ *  a : undefined -> 1
+ *  test : function test() {}
+ *  c : 3
+ * }
+ * 
+ * AO = {
+ *  b : undefined
+ * }
+ */
+function test() {
+  console.log(b); // undefined
+  if (a) {
+    var b = 2;
+  }
+
+  c = 3;
+  console.log(c); // 3
+}
+
+var a;
+test();
+a = 1;
+console.log(a); // 1
+
+//-------------------------------
+var a = 1;
+    b = 2;
+
+console.log(window.a); // 1
+console.log(window.b); // 2
+
+//---------------------------------------
+function test() {
+  var a = b = 1;
+}
+
+test();
+// 访问对象中不存在的属性，会返回undefined
+console.log(window.a); // undefined
+console.log(window.b); // 1
+
+//--------------------------
+/**
+ * AO = {
+ *  a : undefined -> function a() {}
+ * }
+ */
+function test() {
+  // 遇到return直接返回
+  return a;
+  a = 1;
+  function a() {}
+  var a = 2;
+}
+
+console.log(test()); // function a() {}
+
+//--------------------------------------------
+
+/**
+ * AO = {
+ *  a : undefined -> function a() {} -> 1 -> 2
+ * }
+ */
+function test() {
+  a = 1;
+  function a() {}
+  var a = 2;
+  return a;
+}
+
+console.log(test()); // 2
+
+//------------------------------------------------
+
+/**
+ * GO = {
+ *  a : undefined -> 1
+ *  test: function test(e) {}
+ *  f : 5
+ * }
+ * 
+ * AO = {
+ *  e : undefined -> 1 -> function e() {} -> 2
+ *  b : undefined
+ *  c : undefined
+ *  a : undefined -> 4
+ * }
+ */
+a = 1;
+function test(e) {
+  function e() {}
+  arguments[0] = 2;
+  console.log(e); // 2
+  // 此时变量a的值为undefined，不执行if语句内容
+  if (a) {
+    var b = 3;
+  }
+  var c;
+  a = 4;
+  var a;
+  console.log(b); // undefined
+  // 暗示全局变量
+  f = 5;
+  console.log(c); // undefined
+  console.log(a); // 4
+}
+
+var a;
+test(1);
+console.log(a); // 1
+console.log(f); // 5
 ```
