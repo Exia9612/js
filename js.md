@@ -241,7 +241,7 @@ null !=== undefined
 var c = '1' > 2;    // Number('1')
 console.log(c);			// false
 var d = 'a' > 'b';  // 按位比较ASCII码
-console.log(d); // false
+console.log(d); //false
 // 2 > 1  			true
 // true > 3 		Number(true) -> 1
 // 1 > 3  			false
