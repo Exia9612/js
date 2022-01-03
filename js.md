@@ -365,7 +365,7 @@ function test2(a, b) {
 test2(); // 5
 ```
 
-## 预编译与AO GO
+## 预编译与AO(函数执行期上下文) GO(全局执行上下文)
 ### GO预编译步骤
 1. 寻找变量声明并提升
 2. 找函数声明并赋值
@@ -633,4 +633,209 @@ var a;
 test(1);
 console.log(a); // 1
 console.log(f); // 5
+```
+
+## 作用域，作用域链，预编译与闭包
+### 作用域
+[[scope]]属性是函数创建时js内部生成的隐式属性
+### 作用域链
+1. 决定函数在访问变量时的顺序
+2. 函数在被定义时作用域链与定义该函数的执行上下文一致
+3. 函数被执行时生成自己的AO
+```javascript
+/**
+ * 1.
+ * GO = {
+ *  a : function a() {}
+ * }
+ * 2. a函数执行前生成自身的AO
+ * AO = {
+ *  b : function b() {}
+ * }
+ * 3. b函数执行前生成自身的AO
+ * AO = {
+ *  c : function c() {}
+ * }
+ * 4. c函数执行前生成自身的AO
+ * AO = {}
+ */
+function a() {
+  function b() {
+    function c() {
+
+    }
+    c();
+  }
+  b();
+}
+a();
+
+/**
+ * a定义：a.[[scope]] -> 0: GO
+ * a执行：a.[[scope]] -> 0: a的AO
+ *                       1：GO
+ * b定义：b.[[scope]] -> 0：a的AO
+ *                       1：GO
+ * b执行：b.[[scope]] -> 0: b的AO
+ *                       1：a的AO
+ *                       2：GO
+ * c定义：c.[[scope]] -> 0: b的AO
+ *                       1：a的AO
+ *                       2：GO
+ * c执行：c.[[scope]] -> 0：c的AO
+ *                       1：b的AO
+ *                       2：a的AO
+ *                       3：GO
+ * c结束：c.[[scope]] -> 0：b的AO
+ *                       1：a的AO
+ *                       2：GO
+ * b结束：b.[[scope]] -> 0：a的AO
+ *                       1：GO
+ *        c.[[scope]]销毁
+ * a结束：a.[[scope]] -> 0: GO
+ *        b.[[scope]] -> 销毁
+ */
+```
+### 闭包
+1. 当内部函数被返回到外部保存时，一定会产生闭包
+2. 闭包会导致作用域链中的作用域不被释放
+3. 过度的闭包会导致内存泄漏
+```javascript
+/**
+ * GO = {
+ *  c : undefined -> 3
+ *  test3 : undefined -> function test2() {}
+ *  test1 : function test1() {}
+ * }
+ * 
+ * test1的AO
+ * AO = {
+ *  a : undefined -> 1
+ *  test2: function test2() {}
+ * }
+ * 
+ * test2的AO
+ * AO = {
+ *  b : undefined -> 2
+ * }
+ */
+function test1() {
+  function test2() {
+    var b = 2;
+    console.log(a);	// 1
+  }
+  var a = 1;
+  return test2;
+}
+var c = 3;
+var test3 = test1();
+test3();
+
+/**
+ * test1定义: test1.[[scope]] -> 0: GO
+ * test1执行: test1.[[scope]] -> 0: test1的AO
+ *                               1：GO
+ * test2定义: test2.[[scope]] -> 0: test1的AO
+ *                               1：GO
+ * test2执行: test2.[[scope]] -> 0: test2的AO
+ *                               1: test1的AO
+ *                               2：GO
+ * test1结束: test1.[[scope]] -> 0: GO
+ * test2结束: test2.[[scope]] -> 0: test1的AO
+ *                               1: GO
+ *            test1.[[scope]] 销毁
+ * 
+ */
+
+//--------------------------------------------------------------------------
+
+/**
+ * GO = {
+ *  arr : undefined -> [add, reduce]
+ *  test: function test() {}
+ * }
+ * 
+ * AO = {
+ *  n : undefined -> 100
+ *  add : function add() {}
+ *  reduce: function reduce() {}
+ * }
+ * 
+ */
+function test() {
+  var n = 100;
+  function add() {
+    n++;
+    console.log(n);
+  }
+
+  function reduce() {
+    n--;
+    console.log(n);
+  }
+
+  return [add, reduce];
+}
+
+var arr = test();
+arr[0]();
+arr[1]();
+
+/**
+ * test定义： test.[[scope]]  -> 0 : GO
+ * test执行:  test.[[scope]]  -> 0 : test的AO
+ *                               1 : GO
+ * add定义:   add.[[scope]]   -> 0: test的AO
+ *                               1: GO
+ * add执行:   add.[[scope]]   -> 0: add的AO
+ *                               1: test的AO
+ *                               2: GO
+ * reduce定义:  reduce.[[scope]] -> 0: test的AO
+ *                                  1: GO
+ * reduce执行： reduce.[[scope]] -> 0: reduce的AO
+ *                                  1: test的AO
+ *                                  2: GO
+ */
+
+//--------------------------------------------------------------------------
+
+/**
+ * GO = {
+ *  sunSched : undefined -> function sunSched() {} -> {...}
+ * }
+ * 
+ * AO = {
+ *  sunSched : undefined -> ''
+ *  operation: undefined -> {...}
+ * }
+ * 
+ */
+function sunSched() {
+  var sunSched = '';
+
+  var operation = {
+    setSched: function(thing) {
+      sunSched = thing;
+    },
+    showSched: function() {
+      console.log('My schedule on sunday is ' + sunSched);
+    }
+  }
+
+  return operation;
+}
+
+var sunSched = sunSched();
+
+sunSched.setSched('studying');
+sunSched.showSched();
+/**
+ * sunSched定义：sunSched.[[scope]] -> 0: GO
+ * sunSched执行：sunSched.[[scope]] -> 0: sunSched的AO
+ *                                     1: Go
+ * setSched定义: setSched.[[scope]] -> 0: sunSched的AO
+ *                                     1: Go
+ * showSched定义: showSched.[[scope]] -> 0: sunSched的AO
+ *                                       1: Go
+ */
 ```
