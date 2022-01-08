@@ -838,4 +838,158 @@ sunSched.showSched();
  * showSched定义: showSched.[[scope]] -> 0: sunSched的AO
  *                                       1: Go
  */
+
+function test() {
+  var arr = [];
+
+  for (var i = 0; i < 10; i++) {
+    arr[i] = function () {
+      document.write(i + ' ');
+    }
+  }
+
+  return arr;
+}
+
+var arr = test();
+
+for (var j = 0; j < 10; j++) {
+  arr[j](); // 10个10
+}
+//---------------------------------------------------------------
+function test() {
+  var arr = [];
+
+  for (var i = 0; i < 10; i++) {
+    (function (j) {
+      arr[j] = function () {
+        document.write(j + ' ');
+      }
+    })(i)
+  }
+
+  return arr;
+}
+
+var arr = test();
+
+for (var j = 0; j < 10; j++) {
+  arr[j](); // 0-9
+}
+//---------------------------------------------------------------
+function test() {
+  for (var i = 0; i < 10; i++) {
+    (function () {
+      document.write(i, ' ');
+    })();
+  }
+}
+
+test(); // 0-9
+//-------------------------------------------------------------------
+<body>
+  <ul>
+    <li>0</li>
+    <li>1</li>
+    <li>2</li>
+    <li>3</li>
+    <li>4</li>
+  </ul>
+  <script type=text/javascript>
+    var oLi = document.querySelectorAll('li');
+    var oLength = oLi.length;
+    // for (var i = 0; i < oLength; i++) {
+    //   oLi[i].onclick = function() {
+    //     console.log(i);
+    //   }
+    // }
+
+    for (var i = 0; i< oLength; i++) {
+      (function (j) {
+        oLi[j].onclick = function() {
+          console.log(j);
+        }
+      })(i)
+    }
+  </script>
+</body>
+
+function sum() {
+  var n = 0;
+  function add() {
+    n++;
+    console.log(n);
+  }
+  return add;
+}
+
+var add = sum();
+add();
+add();
+add();
+add();
+```
+
+### 立即执行函数
+- IIFE(immediaely invoked function expression)
+- 自动执行，执行完成以后立即释放，常用于初始化函数
+- 一定是表达式才能被执行符号执行
+- 括号里的都是表达式，表达式会忽略函数名称
+- 写法
+```javascript
+;(function() {})();
+
+// w3c推荐
+;(function() {}());
+```
+- 传参
+```javascript
+// 形参
+;(function(a, b) {
+  console.log(a + b); // 3
+})(1, 2); // 实参
+```
+- 返回值
+```javascript
+var sum = (function(a, b) {
+  return a + b;
+})(5, 6);
+console.log(sum); // 11
+```
+- 函数声明转换为表达式的写法
+```javascript
++function test1() {
+  console.log(1);
+}();
+
+-function test2() {
+  console.log(2);
+}();
+
+!function test3() {
+  console.log(3);
+}();
+
+true && function test4() {
+  console.log(4);
+}();
+
+false || function test5() {
+  console.log(5);
+}();
+
+void function test6() {
+  console.log(6);
+}();
+
+2, 3, function test7() {
+  console.log(7);
+}();
+
+var a = 10;
+if (function b(){}) {   //()表达式，忽略函数名
+  a += typeof(b);
+}
+
+console.log(a); // '10undefined'
 ```
