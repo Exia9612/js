@@ -36,7 +36,7 @@
 ## 编程语言
 - 编译型 解释型 脚本语言
 
-## Javascript
+# Javascript
 1. 组成
 - ECMAScript(语法，类型，语句，关键字...): 由ECMA-262定义
 - DOM(Document Object Model): 提供与网页内容交互的方法和接口(W3C规范)
@@ -992,4 +992,289 @@ if (function b(){}) {   //()表达式，忽略函数名
 }
 
 console.log(a); // '10undefined'
+```
+
+## 对象 
+```javascript
+// 字面量
+var teacher = {
+  name: '张三',
+  age: 32,
+  sex: 'male',
+  height: 176,
+  weight: 130,
+  teach: function () {
+    console.log('I am teaching JavaScript');
+  },
+  smoke: function () {
+    console.log('I am smoking');
+  },
+  eat: function () {
+    console.log('I am having a dinner');
+  }
+}
+
+// 增加属性/方法
+teacher.email = '350604967@qq.com';
+teacher.drink = function () {
+  console.log('I am drinking');
+}
+
+// 修改属性/方法
+teacher.age = '25';
+teacher.teach = function () {
+  console.log('I am teaching HTML');
+}
+
+// 删除属性/方法
+delete teacher.name;
+delete teacher.eat;
+
+console.log(teacher);
+//--------------------------------------------------------------------------
+var attendance = {
+  students: [],
+  total: 6,
+  join: function(name) {
+    this.students.push(name);
+    if (this.students.length === this.total) {
+      console.log(name + '到课，学生已到齐');
+    } else {
+      console.log(name + '到课，学生未到齐');
+    }
+  },
+  leave: function(name) {
+    var idx = this.students.indexOf(name);
+    if (idx !== -1) {
+      this.students.splice(idx, 1);
+    }
+    console.log(name + '早退');
+    console.log(this.students);
+  },
+  classOver: function() {
+    this.students = [];
+    console.log('已下课');
+  }
+}
+
+attendance.join('张三');
+attendance.join('李四');
+attendance.join('王五');
+attendance.join('赵六');
+attendance.join('小红');
+attendance.join('小明');
+
+attendance.leave('王五');
+
+attendance.classOver();
+```
+
+### 构造函数与实例化
+1. 自定义构造函数建议大驼峰命名
+2. 通过new关键字创建实例化对象
+3. 构造函数中的this指向实例化对象
+```javascript
+function Teacher() {
+  this.name = '张三';
+  this.sex = '男';
+  this.weight = 130;
+  this.smoke = function () {
+    this.weight--;
+    console.log(this.weight);
+  }
+  this.eat = function () {
+    this.weight++;
+    console.log(this.weight);
+  }
+}
+
+var t1 = new Teacher();
+var t2 = new Teacher();
+
+t2.name = '李四';
+t1.smoke(); // 129
+t1.smoke(); // 128
+t2.smoke(); // 129
+//--------------------------------------------------------
+//初始化构造函数
+function Teacher(name, sex, weight, course) {
+  this.name = name;
+  this.sex = sex;
+  this.weight = weight;
+  this.course = course;
+}
+
+var t1 = new Teacher('李四', '女', 150, 'HTML');
+console.log(t1);
+//-----------------------------------------------------------
+function Teacher(opt) {
+  this.name = opt.name;
+  this.sex = opt.sex;
+  this.weight = opt.weight;
+  this.course = opt.course;
+  this.smoke = function () {
+    this.weight--;
+    console.log(this.weight);
+  }
+  this.eat = function () {
+    this.weight++;
+    console.log(this.weight);
+  }
+}
+
+var t1 = new Teacher({
+  name: '张三',
+  sex: '男',
+  weight: 145,
+  course: 'JS'
+})
+```
+
+### 原型与原型链
+1. 原型prototype是function对象的一个属性，它本身也是一个对象
+2. prototype是构造函数构造出的每个实例的公共祖先
+3. 构造函数实例化过程
+ - 在内存中创建一个新对象
+ - 新对象内部的[[ prorotype ]]特性被赋值为构造函数的prototype属性
+ - 构造函数内部的this指向这个新对象
+ - 执行构造函数中的代码
+ - 如果构造函数返回非空对象，则返回这个非空对象，否则返回this
+4. 实例化对象通过__proto__属性向上查找属性和方法的链条就叫做原型链
+5. 每个由相同函数构造出得实例化对象共享一个__proto__，即构造函数的prototype属性
+6. 可以通过实例修改原型上的应用属性，但不能修改原始属性。修改原始属性会在实例上生成新的属性
+```javascript
+// Professor原型上添加属性
+Professor.prototype.tSkill = 'JAVA';
+function Professor() {}
+// 实例化一个Professor对象
+var professor = new Professor();
+
+// Teacher构造函数原型指向professor对象
+Teacher.prototype = professor;
+function Teacher() {
+  this.mSkill = 'jS/JQ';
+  this.success = {
+    alibaba: '28',
+    tencent: '30'
+  }
+  this.students = 500;
+}
+
+// 实例化一个Teacher对象
+var teacher = new Teacher();
+// Student构造函数原型指向teacher对象
+Student.prototype = teacher;
+function Student() {
+  this.pSkill = 'HTML/CSS';
+}
+// 实例化一个Student对象
+var student = new Student();
+/**
+ * 1. student对象没有success属性，沿着原型链向上查找
+ * 2.	student.success = student.__proto__.success
+ * 3. student.students.baidu = '100'
+ * 4. student.success.alibaba = '29'
+ */
+student.success.baidu = '100';
+student.success.alibaba = '29';
+/**
+ * 1. student对象没有students属性，students被视为原始属性
+ * 2.	student.students = student.__proto__.student
+ * 3. students被添加为student上的属性
+ * 3. student.students++
+ */
+student.students++;
+console.log(teacher, student);
+```
+
+### Object,create()方法
+Object.create(obj || null)返回一个新对象，该对象的原型为obj或null
+```javascript
+// 创建obj1空对象
+// 不是所有的对象都继承于Object.prototype
+var obj1 = Object.create(null);
+console.log(obj1);
+obj1.num = 1;
+var obj2 = Object.create(obj1);
+console.log(obj2);
+console.log(obj2.num);
+
+var obj = Object.create(null);
+
+obj.num = 1;
+
+var obj1 = {
+  count: 2
+}
+
+obj.__proto__ = obj1;
+// 给空对象添加__proto__属性无效
+console.log(obj.count); // undefined
+```
+
+### toString方法
+1. undefined和null没有toString方法，因为不能被转换为包装类
+```javascript
+var num = 1;
+// 原始值没有属性和方法
+num.toString();
+// new Number(1) -> toString();
+var num2 = new Number(num);
+console.log(num2.toString());
+```
+2. 可以通过toString方法判断对象类型
+```javascript
+var toString = Object.prototype.toString;
+console.log(toString.call(1));    // [object Number]
+console.log(toString.call('a'));  // [object String]
+console.log(toString.call(true)); // [object Boolean]
+console.log(toString.call([]));   // [object Array]
+console.log(toString.call({}));   // [object Object]
+```
+
+### call和apply方法，改变被调用函数中的this指向
+```javascript
+function Car(brand, color) {
+  this.brand = brand;
+  this.color = color;
+  this.run = function () {
+    console.log('running');
+  }
+}
+
+var newCar = {
+  displacement: '3.0'
+};
+// Car.call(newCar, 'Benz', 'red');
+Car.apply(newCar, ['Benz', 'red']);
+console.log(newCar);
+var car = new Car('Benz', 'red');
+console.log(car);
+
+function Compute() {
+  this.plus = function (a, b) {
+    console.log(a + b);
+  }
+
+  this.minus = function (a, b) {
+    console.log(a - b);
+  }
+}
+
+function FullCompute() {
+  Compute.apply(this);
+  this.mul = function (a, b) {
+    console.log(a * b);
+  }
+
+  this.div = function (a, b) {
+    console.log(a / b);
+  }
+}
+
+var compute = new FullCompute();
+compute.plus(1, 2);
+compute.minus(1, 2);
+compute.mul(1, 2);
+compute.div(1, 2);
 ```
