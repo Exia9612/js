@@ -1278,3 +1278,151 @@ compute.minus(1, 2);
 compute.mul(1, 2);
 compute.div(1, 2);
 ```
+
+### 继承
+1. 通过new实例化出来的对象继承构造函数的原型，即prototype属性
+   - 存在多个实例共享一个原型对象，修改某个实例的原型时，其它实例的原型也会被修改
+```javascript
+  //公共原型
+function Teacher() {
+  this.name = 'Mr. Li';
+  this.tSkill = 'JAVA';
+}
+
+Teacher.prototype = {
+  pSkill: 'JS/JQ'
+}
+
+var t = new Teacher();
+console.log(t);
+
+function Student() {
+  this.name = 'Mr. Wang';
+}
+
+Student.prototype = Teacher.prototype;
+Student.prototype.age = 18;
+
+var s = new Student();
+
+console.log(s);
+  ```
+2. 通过更改实例的__proto__属性可以实现继承
+```javascript
+Professor.prototype = {
+  name: 'Mr. Zhang',
+  tSkill: 'JAVA'
+}
+function Professor() {}
+
+var professor = new Professor();
+
+Teacher.prototype = professor;
+function Teacher() {
+  this.name = 'Mr. Wang';
+  this.mSkill = 'JS/JQ';
+}
+
+var teacher = new Teacher();
+
+Student.prototype = teacher;
+function Student() {
+  this.name = 'Mr. Li';
+  this.pSkill = 'HTML/CSS';
+}
+
+var student = new Student();
+console.log(student);
+```
+
+3. 圣杯模式实现继承
+   通过创建一个缓冲类的实例，把该实例作为继承实例的原型来避免共享实例
+```javascript
+function inherit(Target, Origin) {
+  function Buffer() {}
+  Buffer.prototype = Origin.prototype
+  Target.prototype = new Buffer()
+  Target.prototype.constructor = Target
+  Target.prototype.supper_class = Origin
+}
+
+function Teacher() {}
+function Student() {}
+inherit(Student, Teacher);
+var s = new Student();
+var t= new Teacher();
+
+console.log(s);
+console.log(t);
+```
+```javascript
+// IIFE
+var inherit = (function () {
+  var Buffer = function () { }
+  return function (Target, Origin) {
+    Buffer.prototype = Origin.prototype;
+    Target.prototype = new Buffer();
+    Target.prototype.constructor = Target;
+    Target.prototype.super_class = Origin;
+  }
+})();
+
+Teacher.prototype.name = 'Mr. Zhang';
+function Teacher() { }
+function Student() { }
+inherit(Student, Teacher);
+Student.prototype.age = 18;
+var s = new Student();
+var t = new Teacher();
+
+console.log(s);
+console.log(t);
+```
+
+## js模块化开发
+  通过闭包来实现命名空间，实现每个模块相互独立
+```javascript
+window.init = function () {
+  init()
+}
+
+var init = (function () {
+  ....
+  return function() {}
+})()
+
+var initProgrammer = (function () {
+  var Programmer = function () {}
+  Programmer.prototype = {
+    name: '程序员',
+    tool: '计算机',
+    work: '编写应用程序',
+    duration: '10个小时',
+    say: function () {
+      console.log('我是一名' + this.myName + this.name + ', 我的工作是用' + this.tool + this.work + ', 我每天工作' + this.duration + '，我的工作需要用到' + this.lang.toString() + '。');
+    }
+  }
+
+  function FrontEnd() {}
+  function BackEnd() {}
+
+  inherit(FrontEnd, Programmer);
+  inherit(BackEnd, Programmer);
+
+  FrontEnd.prototype.lang = ['HTML', 'CSS', 'JavaScript'];
+  FrontEnd.prototype.myName = '前端';
+
+  BackEnd.prototype.lang = ['Node', 'Java', 'SQL'];
+  BackEnd.prototype.myName = '后端';
+
+  return {
+    FrontEnd: FrontEnd,
+    BackEnd: BackEnd
+  }
+})();
+
+var frontEnd = new initProgrammer.FrontEnd();
+var backEnd = new initProgrammer.BackEnd();
+frontEnd.say();
+backEnd.say();
+```
