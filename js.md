@@ -371,7 +371,7 @@ test2(); // 5
 2. 找函数声明并赋值
 3. 执行函数
 ### 函数预编译步骤
-1. 寻找形参并未形参做变量声明
+1. 寻找形参并为形参做变量声明
 2. 寻找变量声明并提升
 3. 为形参赋实参值
 4. 找函数声明并赋值
@@ -1425,4 +1425,356 @@ var frontEnd = new initProgrammer.FrontEnd();
 var backEnd = new initProgrammer.BackEnd();
 frontEnd.say();
 backEnd.say();
+```
+
+## caller callee
+### arguments.callee
+- 实参列表对应的函数
+```javascript
+function test(a, b, c) {
+  console.log(arguments.callee.length); // 3
+  console.log(test.length); // 3
+  console.log(arguments.length); // 2
+}
+test(1, 2)
+
+function test1() {
+  console.log(arguments.callee);
+  function test2() {
+    console.log(arguments.callee);
+  }
+  test2();
+}
+test1();
+```
+- 可以在匿名函数中获取函数自身
+```javascript
+function sum(n) {
+  if (n <= 1) {
+    return 1;
+  }
+  return n + sum(n - 1);
+}
+//--------------------------------------------------------------------------------
+var sum = (function (n) {
+  if (n <= 1) {
+    return 1;
+  }
+  return n + arguments.callee(n - 1)
+})(100);
+
+console.log(sum);
+```
+
+### function.caller
+- 返回执行function的函数
+```javascript
+test1();
+function test1() {
+  test2();
+}
+
+function test2() {
+  console.log(test2.caller);
+}
+```
+
+## 深拷贝实现
+```javascript
+Object.prototype.num = 1;
+var person1 = {
+  name: '张三',
+  age: 18,
+  sex: 'male',
+  height: 180,
+  weight: 140,
+  children: {
+    first: {
+      name: '张小一',
+      age: 13
+    },
+    second: {
+      name: '张小二',
+      age: 7
+    },
+    third: {
+      name: '张小三',
+      age: 3
+    }
+  },
+  car: ['Benz', 'Mazda']
+};
+
+function deepClone(origin, target) {
+  // 没传入target时，声明一个空对象
+  var target = target || {},
+  //	保存对象原型上toString方法
+  toStr = Object.prototype.toString,
+  //	保存对象原型上数组调用toString方法的返回值
+  arrType = '[object Array]';
+	// 枚举源对象上的可枚举属性（包括原型上的可枚举属性）
+  for (var key in origin) {
+    // 过滤掉原型上的属性，只拷贝自身可枚举属性
+    if (origin.hasOwnProperty(key)) {
+      // 当属性是引用值，且不为null时，条件为真
+      if ((typeof(origin[key]) === 'object') && origin[key] !== null) {
+        // 当前引用值调用对象原型toString方法判断是否是数组
+        if(toStr.call(origin[key]) === arrType) {
+          // 声明一个空数组，进行递归
+          target[key] = [];
+        } else {
+          // 声明一个空对象，进行递归
+          target[key] = {};
+        }
+        // 要克隆的属性是引用值，需要递归
+        deepClone(origin[key], target[key])
+      } else {
+        // 原始值直接复制
+        target[key] = origin[key];
+      }
+    }
+  }
+  // 返回深拷贝结果
+  return target;
+}
+// 将深拷贝结果赋值给person2
+var person2 = deepClone(person1);
+// 修改对象的原始值
+person2.name = '李四';
+// 修改对象的引用值
+person2.car = ['BMW'];
+console.log(person1, person2);
+
+// 练习题
+/**
+ * AO = {
+ * foo: undefined -> 2
+ * }
+ */
+function test() {
+  console.log(foo); // undefined
+  var foo = 2;
+  console.log(foo); // 2
+  console.log(a); // ReferenceError
+}
+
+test();
+
+/**
+ * AO = {
+ * test: undefined -> function test() {console.log(1)}
+ * }
+ */
+function a() {
+  var test;
+  test();
+  function test() {
+    console.log(1); // 执行
+  }
+}
+a();
+
+/**
+ * GO = {
+ * name: undefined -> '222'
+ * a: undefined -> {
+ *    name: '111',
+ *    say: function () {
+ *        console.log(this.name)
+ * }
+ * }
+ * fun: undefined -> function () {...}
+ * b: undefined -> {
+ *  name: '333',
+ *  say: function (fun) {...}
+ * }
+ * }
+ */
+var name = '222';
+var a = {
+  name: '111',
+  say: function () {
+    console.log(this.name);
+  }
+}
+
+var fun = a.say;
+fun(); // '222'
+a.say(); // '111'
+var b = {
+  name: '333',
+  say: function (fun) {
+    fun();
+  }
+}
+b.say(a.say); // '222'
+b.say = a.say;
+b.say(); // '333'
+
+/**
+ * AO = {
+ * marty: undefined -> {
+    name: 'marty',
+    printName: function () {
+      console.log(this.name);
+    }
+ * test1: undefined -> {
+    name: 'test1'
+  }
+ * test2: undefined -> {
+    name: 'test2'
+  }
+ }
+ * test3: undefined -> {
+    name: 'test3',
+    printName: function () {
+      console.log(this.name);
+    }
+  }
+ * }
+ */
+function test() {
+  var marty = {
+    name: 'marty',
+    printName: function () {
+      console.log(this.name);
+    }
+  }
+
+  var test1 = {
+    name: 'test1'
+  }
+  var test2 = {
+    name: 'test2'
+  }
+  var test3 = {
+    name: 'test3'
+  }
+
+  test3.printName = marty.printName;
+  marty.printName.call(test1); // 'test1'
+  marty.printName.apply(test2); // 'test2'
+  marty.printName(); // 'marty'
+  test3.printName(); // 'test3'
+}
+
+test();
+
+/**
+ * GO = {
+ *  bar: undefined -> {
+ *  a: '1' -> 'a'
+ *  Object.prototype.b = 'b'
+ * }
+ *  test: function test() {...}
+ * }
+ * 
+ */
+var bar = {
+  a: '1'
+}
+
+function test() {
+  bar.a = 'a';
+  Object.prototype.b = 'b';
+  return function inner() {
+    console.log(bar.a);
+    console.log(bar.b);
+  }
+}
+test()(); // 'a' 'b'
+
+/**
+ * GO = {
+ *  getName: function () {
+      console.log(4);
+    }
+ *  Foo: function Foo() {
+ *    getName = function () {
+ *    console.log(2)
+ *    }
+ *  }
+ * Foo.prototype = {
+ *  getName = function () {
+    console.log(3);
+      }
+ *  }
+ * }
+ */
+function Foo() {
+  getName = function () {
+    console.log(1);
+  }
+  return this;
+}
+
+Foo.getName = function () {
+  console.log(2);
+}
+Foo.prototype.getName = function () {
+  console.log(3);
+}
+var getName = function () {
+  console.log(4);
+}
+function getName() {
+  console.log(5);
+}
+
+Foo.getName(); // 2
+getName(); // 4
+Foo().getName(); // 1
+getName(); // 1
+new Foo.getName(); // 2
+new Foo().getName(); // 3
+new new Foo().getName(); // 3
+```
+
+## 类数组
+- 对象
+- 可以以数组的方式根据索引取数组值
+- 有length属性
+```javascript
+var obj = {
+  '2': 3,
+  '3': 4,
+  'length': 2,
+  'splice': Array.prototype.splice,
+  'push': Array.prototype.push
+};
+
+/**
+* 数组下标是从0开始的，length = 2 -> Array(2) -> [empty, empty]
+* 每次push都是从this.length开始插入
+* obj[length] = 1	 -> obj[2] = 1  length++
+* obj[length] = 2  -> obj[3] = 2  length++
+ */
+obj.push(1);
+obj.push(2);
+console.log(obj);
+```
+```javascript
+var person = {
+  '0': '张小一',
+  '1': '张小二',
+  '2': '张小三',
+  'name': '张三',
+  'age': 32,
+  'weight': 140,
+  'height': 180,
+  'length': 3
+};
+// 对象原型上继承数组原型的push、splice方法
+// 实例化后的对象将通过原型链继承push、splice方法
+// 有length属性且为正整数的对象将被识别为类数组
+Object.prototype.push = Array.prototype.push;
+Object.prototype.splice = Array.prototype.splice;
+
+// for...in枚举对象上可枚举的属性（包括继承的属性）
+for (var key in person) {
+  // 过滤掉继承的属性
+  if (person.hasOwnProperty(key)) {
+    console.log(person[key]);
+  }
+}
 ```
