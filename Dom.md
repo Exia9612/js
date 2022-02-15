@@ -69,6 +69,30 @@
    - IE8以下没有该方法，性能较低，不能实是更新(缓存)
    - 存在于Document和Element原型中
   11. document.documentElement直接获取整个html文档
+  ### 节点操作
+  1. createElement(str)
+   - 存在于Document
+   - 创建元素节点
+  2. createTextNode(content)
+   - 创建文本节点
+  3. createComment(content)
+  4. appendChild
+   - 增加子节点
+   - 剪切已有的节点，添加到某个节点下
+   - 存在于顶层Node原型中
+  5. insertBefore(a, b)
+   - 存在于顶层Node原型中
+   - 在父级节点下的子节点b之前插入a节点
+  6. removeChild
+   - 存在于顶层Node原型中
+   - 删除子节点
+   - 返回值是删除的节点
+  7. replaceChild(new, origin)
+   - new节点替换origin节点
+  8. innerText/innerHTML 
+   - innerHTML返回带有标签
+   - innerText只返回文本
+   - 在innerText中添加标签并不会被识别为HTML，因为标签的<>被转换为字符实体
 
 ## DOM结构
 ![Image text](./img/dom结构.png)

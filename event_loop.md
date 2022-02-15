@@ -19,4 +19,43 @@
 #### 宏任务与微任务
   - 创建线程的目的是为了实现异步
   - 宏任务：宿主提供的异步方法与任务（script setTimeout UI渲染）
-  - 微任务：ECMA提供的API（Promise）
+  - 微任务：ECMA提供的API（Promise
+
+## 任务队列
+![Image text](./img/eventqueen.png)
+- script标签本身是一个宏任务
+- 宏任务每次时间环循环只取一个
+- 例子
+```javascript
+document.body.style.backgroundColor = 'orange'
+console.log(1)
+
+setTimeout(() => {
+  document.body.style.backgroundColor = 'green'
+  console.log(2)
+}, 100)
+
+Promise.resolve(3).then(num => {
+  document.body.style.backgroundColor = 'purple'
+  console.log(num)
+})
+
+/*
+  执行栈
+    color = orange
+    console.log(1)
+    Promise.resolve(3)
+  宏任务队列
+    setTimeout cb
+  微任务队列
+    Promise.then cb
+  执行微任务队列
+    color = purple
+    console.log(3)
+  GUI渲染
+    color = purple
+  宏任务
+    color = green
+    console.log(3)
+*/
+```
