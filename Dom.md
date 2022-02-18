@@ -93,6 +93,12 @@
    - innerHTML返回带有标签
    - innerText只返回文本
    - 在innerText中添加标签并不会被识别为HTML，因为标签的<>被转换为字符实体
+   - 火狐老版本不支持inneText, textContent替代
+  9. setAttribute(attrName, value)/getAttribute(attrName)
+  10. document.createDocumentFragment
+    - 创建文档片段，节点容器
+    - 不在render tree中的节点内添加节点，避免回流
+    - 相比字符串拼接性能慢(div.innerHTML = '<li></li>')
 
 ## DOM结构
 ![Image text](./img/dom结构.png)
@@ -100,3 +106,137 @@
   - Text(文本节点原型) Comment(注释节点原型)继承于CharacterData
   - Element是元素节点的构造函数
   - HTMLDocument下有body和head属性，可以选择到HTMLBodyElement和HTMLHeadElement的元素实例
+
+## 滚动，兼容模式，可视尺寸
+### 滚动条距离
+- 页面相比可视窗口上移或向右移动的距离
+![Image text](./img/滚动距离兼容.png)
+1. window.pageXOffset/window.pageYOffset
+   - IE9/IE8及以下不支持
+2. document.body.scrollLeft/scrollTop
+3. document.documentElement.scrollLeft/scrollTop
+4. window.scrollX/scrollY
+```javascript
+function getScrollOffset() {
+  if (window.pageXOffset) {
+    return {
+      left: window.pageXOffset,
+      top: window.pageYOffset
+    }
+  } else {
+    retrun {
+      left: document.body.scrollLeft + document.documentElement.scrollLeft,
+      right: document.body.scrollTop + document.documentElement.scrollTop
+    }
+  }
+}
+```
+
+### 操作滚动条
+1. window.scroll(x, y) window.scrollTo(x, y)
+2. window.scrollBy(x, y)
+
+### 浏览器可视区域尺寸(窗口的宽高)
+1. window.innerWidth/innerHeight
+2. document.documentElement.clientWidth/clientHeight
+   - IE8/IE9及以下
+   - 标准模式
+3. document.body.clientWidth/clientHeight
+   - 怪异模式
+```javascript
+function getViewPort() {
+  if (window.innerWidth) {
+    return {
+      width: window.innerWidth,
+      height: window.innerHeight
+    }
+  } else if (document.compatMode === 'BackCompat') {
+    return {
+      width: document.body.clientWidth,
+      height: document.body.clientHeight
+    }
+  } else {
+    return {
+      width: document.documentElement.clientWidth,
+      height: document.documentElement.clientHeight
+    }
+    width: document.documentElement.clientWidth,
+    height: document.documentElement.clientHeight
+  }
+}
+```
+4. outerWidth/outerHeight
+   - 浏览器全部区域(除标签栏)
+
+### 页面宽高
+可视区域 + 滚动距离
+1. document.body.scrollHeight/scrollWidth 
+2. document.socumentElement.scrollHeight/scrollWidth
+```javascript
+function getScrillSize() {
+  if (document.body.scrollWidth) {
+    return {
+      width: document.body.scrollWidth,
+      height: document.body.scrollHeight
+    }
+  } else {
+    return {
+      width: document.documentElement.scrollWidth,
+      height: document.documentElement.scrollHeight
+    }
+  }
+}
+```
+
+### offsetLeft/offsetTop
+- 元素距离父级定位元素或可视区域边框的距离
+```javascript
+function getEleDocPosition(el) {
+   var parent = el.offsetParent // 获取有定位的父元素
+   var offsetLeft = el.offsetLeft  
+   var offsetTop = el.offsetTop
+
+   while (parent) {
+     offsetLeft += parent.offsetLeft
+     offsetTop += parent.offsetTop
+     parent = parent.offsetParent
+   }
+
+   return {
+     left: offsetLeft,
+     top: offsetTop
+   }
+}
+```
+
+## 浏览器怪异模式和标准模式
+document.compatMode CSS1Compat(标准模式) BackCompat(怪异模式)
+### 标准模式
+- \<!DOCTYPE html>
+- 兼容w3c dom规范
+### 怪异模式
+- 浏览器兼容自己之前版本，忽略w3c规范
+
+## DOM间接修改css
+### 获取元素样式
+1. window.getComputedStyle(elem, null)
+   - 查看计算样式
+   - 第二个参数是元素的伪元素，获取伪元素的样式，只读
+   - 操作伪元素需要该样式类
+```javascript
+function getStyles(elem, prop) {
+  if (window.getComputedStyle) {
+    if (prop) {
+      return window.getComputedStyle(elem, null)[prop]
+    } else {
+      return window.getComputedStyle(elem, null)
+    }
+  } else {
+    if (prop) {
+      return elem.currentStyle[prop]
+    } else {
+      return elem.currentStyle
+    }
+  }
+}
+```

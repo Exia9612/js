@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style type="text/css">
+    a {
+      text-decoration: none;
+    }
+
+    ul {
+      padding: 0;
+      margin: 0;
+      list-style: none;
+    }
+
+    .dropdown {
+      position: relative;
+      width: 200px;
+      height: 50px;
+      background-color: #000000;
+    }
+
+    .dropdown::after {
+      content: "";
+      display: table;
+      position: absolute;
+      top: 18px;
+      right: 15px;
+      width: 15px;
+      height: 15px;
+      background-image: url(icons/arrow-down.png);
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+    }
+
+    .dropdown.up::after {
+      background-image: url(icons/arrow-top.png);
+    }
+
+    .dropdown .list {
+      height: 0;
+      overflow: hidden;
+    }
+
+    .dropdown:hover .list {
+      display: block;
+    }
+
+    .dropdown a {
+      display: block;
+    }
+
+    .dropdown .main {
+      display: block;
+      height: 100%;
+      text-align: center;
+      line-height: 50px;
+      color: #fff;
+    }
+
+    .dropdown .item {
+      height: 40px;
+      background-color: #333;
+    }
+
+    .dropdown .item:hover {
+      background-color: #000;
+    }
+
+
+    .dropdown .item a {
+      height: 100%;
+      color: #999;
+      text-align: center;
+      line-height: 40px;
+    }
+  </style>
+</head>
+<body>
+  <div class="dropdown">
+    <a href="javascript:;" class="main">下拉菜单</a>
+    <ul class="list">
+      <li class="item"><a href="">first</a></li>
+      <li class="item"><a href="">second</a></li>
+      <li class="item"><a href="">third</a></li>
+      <li class="item"><a href="">forth</a></li>
+      <li class="item"><a href="">fifth</a></li>
+    </ul>
+  </div>
+
+  <script>
+    var dropdown = document.getElementsByClassName('dropdown')[0]
+    var oList = elemChildren(dropdown)[1]
+    var timer = null
+    var listHeight = 0
+    var speed = 2
+
+    dropdown.onmouseenter = function () {
+      clearInterval(timer)
+      timer = setInterval(() => {
+        if (listHeight >= 200) {
+          clearInterval(timer)
+        } else {
+          listHeight = parseInt(getStyles(oList, 'height')) + speed
+          oList.style.height = listHeight + 'px'
+        }
+      }, 1)
+      this.className += ' up'
+    }
+
+    dropdown.onmouseleave = function () {
+      clearInterval(timer)
+      timer = setInterval(() => {
+        if (listHeight <= 0) {
+          clearInterval(timer)
+        } else {
+          listHeight = parseInt(getStyles(oList, 'height')) - speed
+          oList.style.height = listHeight + 'px'
+        }
+      }, 1)
+      this.className = 'dropdown'
+    }
+
+    function elemChildren(node) {
+      var temp = {
+        'length': 0,
+        'push': Array.prototype.push,
+        'splice': Array.prototype.splice
+      }
+
+      var children = node.childNodes
+      var len = children.length
+
+      for (var i = 0; i < len; i++) {
+        item = children[i]
+        if (item.nodeType === 1) {
+          temp.push(item)
+        }
+      }
+      return temp
+    }
+
+    function getStyles(elem, prop) {
+      if (window.getComputedStyle) {
+        if (prop) {
+          return window.getComputedStyle(elem, null)[prop]
+        } else {
+          return window.getComputedStyle(elem, null)
+        }
+      } else {
+        if (prop) {
+          return elem.currentStyle[prop]
+        } else {
+          return elem.currentStyle
+        }
+      }
+    }
+  </script>
+</body>
+</html>
