@@ -240,3 +240,74 @@ function getStyles(elem, prop) {
   }
 }
 ```
+
+# js事件
+- 绑定事件 = 绑定事件的处理函数
+- 事件 + 事件反馈 = 前段交互
+## 绑定事件处理函数
+  1. elem.onclick = function
+  2. elem.addEventListener(事件类型， 事件处理函数， 是否禁用冒泡)
+```javascript
+function addEvent(el, type, fn) {
+  if (el.addEventListener) {
+    el.addEventListener(type, fn, false)
+  } else if (el.attavhEvent) {
+    el.attachEvent('on' + type, function () {
+      fn.call(el)
+    })
+  } else {
+    type = 'on' + type
+    el[type] = fn
+  }
+}
+```
+## 解除事件绑定函数
+  1. elem.onclick = null
+  2. elem.removeEventListener(事件类型，事件处理函数，false)
+
+## 事件冒泡和捕获
+- 先执行捕获，再执行冒泡，在事件源上根据事件绑定顺序执行
+### 冒泡
+- dom元素从里向外触发相同类型的事件的回调
+### 捕获
+- dom元素从外向里触发相同类型的事件的回调
+### 取消冒泡
+```javascript
+elem.addEventListener('click', function (e) {
+  var e = e || window.event //IE8
+  e.stopPropagation()
+}, false)
+```
+### 取消默认事件
+event.preventDefault
+event.returnValue = false(IE9及以下)
+
+## 事件流
+- 事件捕获，处于目标阶段，事件冒泡
+
+## 事件对象/事件源对象/事件代理
+- 事件会被javascript包装为事件对象，传入事件处理函数的第一个参数
+```javascript
+elem.onclick = function (event) {
+  var event = event || window.event
+}
+```
+- 触发事件的节点
+```javascript
+elem.onclick = function (event) {
+  var event = event || window.event
+    tar = event.target || event.srcElement
+  console.log(tar)
+}
+```
+- 事件代理
+通过为父元素绑定相应事件，利用子元素的的事件冒泡触发父元素的对应事件，避免为每一个子元素绑定事件
+```javascript
+elem.onclick = function (event) {
+  var event = event || window.event
+    tar = event.target || event.srcElement
+
+  var index = Array,prototype.indexOf(parent, children)
+  console.log(tar)
+}
+```
