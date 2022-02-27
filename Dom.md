@@ -126,7 +126,7 @@ function getScrollOffset() {
   } else {
     retrun {
       left: document.body.scrollLeft + document.documentElement.scrollLeft,
-      right: document.body.scrollTop + document.documentElement.scrollTop
+      top: document.body.scrollTop + document.documentElement.scrollTop
     }
   }
 }
@@ -173,7 +173,7 @@ function getViewPort() {
 1. document.body.scrollHeight/scrollWidth 
 2. document.socumentElement.scrollHeight/scrollWidth
 ```javascript
-function getScrillSize() {
+function getScrollSize() {
   if (document.body.scrollWidth) {
     return {
       width: document.body.scrollWidth,
@@ -209,6 +209,61 @@ function getEleDocPosition(el) {
 }
 ```
 
+### 鼠标行为
+#### 坐标系
+  1. clientX/Y 鼠标位置相对于当前可视区域的坐标，不包括滚动条距离
+  2. layerX/Y 同pageX/Y，IE11下同clientX/Y
+  3. screenX/Y 鼠标位置相对于屏幕的坐标
+  4. x/y 同clientX/Y相同，firefox不支持
+  5. pageX/pageY 相对于当前文档的坐标，包含滚动条距离，IE9以下不支持
+  6. offsetX/Y 鼠标位置相对于块元素的坐标，包含边框，safari不包括
+```javascript
+// 鼠标相对于文档的坐标s，实现pageX/Y
+function pagePos(e) {
+  var sLeft = getScrollOffset().left, //滚动距离
+      sTop = getScrollOffset().top,
+      cLeft = document.documentElement.clientLeft || 0, //文档偏移，document自带margin(css样式设置为0时，计算时还会出现)
+      cTop = document.documentElement.clientTop || 0
+
+  return {
+     X: e.clientX + sLeft - cLeft,
+     Y: e.client + sTop - cTop
+  }
+}
+```
+
+#### 鼠标事件
+```javascript
+// **拖拽元素**
+function elemDrag(elem) {
+  var x,
+      y
+
+  addEvent(elem, 'mousedown', function (e) {
+    var e = e || window.event,
+    x = pagePos(e).X - getStyles(elem, 'left'),
+    y = pagePos(e).Y - getStyles(elem, 'top')
+
+    addEvent(document, 'mousemove', mouseMove);
+    addEvent(document, 'mouseup', mouseUp);
+    cancelBubble(e);
+    preventDefaultEvent(e)
+  })
+
+  function mouseMove(e) {
+    var e = e || window.event;
+    elem.style.top = pagePos(e).Y - y + 'px';
+    elem.style.left = pagePos(e).X - x + 'px';
+  }
+
+  function mouseUp(e) {
+    var e = e || window.event;
+    removeEvent(document, 'mousemove', mouseMove);
+    removeEvent(document, 'mouseup', mouseUp);
+  }
+}
+```
+
 ## 浏览器怪异模式和标准模式
 document.compatMode CSS1Compat(标准模式) BackCompat(怪异模式)
 ### 标准模式
@@ -224,7 +279,7 @@ document.compatMode CSS1Compat(标准模式) BackCompat(怪异模式)
    - 第二个参数是元素的伪元素，获取伪元素的样式，只读
    - 操作伪元素需要该样式类
 ```javascript
-function getStyles(elem, prop) {
+function getStyles(elem, prop) {ß
   if (window.getComputedStyle) {
     if (prop) {
       return window.getComputedStyle(elem, null)[prop]
@@ -264,6 +319,17 @@ function addEvent(el, type, fn) {
 ## 解除事件绑定函数
   1. elem.onclick = null
   2. elem.removeEventListener(事件类型，事件处理函数，false)
+```javascript
+function removeEvent(elem, type, fn) {
+  if (elem.addEventListener) {
+    elem.removeEventListener(type, fn, false)
+  } else if (elem.attachEvent) {
+    elem.detachEvent('on' + type, fn)
+  } else {
+    elem['on' + type] = null
+  }
+}
+```
 
 ## 事件冒泡和捕获
 - 先执行捕获，再执行冒泡，在事件源上根据事件绑定顺序执行
@@ -277,10 +343,29 @@ elem.addEventListener('click', function (e) {
   var e = e || window.event //IE8
   e.stopPropagation()
 }, false)
+
+function cancelBubble(e) {
+  var e = e || window.event //IE8
+  if (e.stopPropagation) {
+    e.stopPropagation()
+  } else {
+    e.cancelBubble = true
+  }
+}
 ```
 ### 取消默认事件
 event.preventDefault
 event.returnValue = false(IE9及以下)
+```javascript
+function preventDefaultEvent(e) {
+  var e = e || window.event
+  if (e.preventDefault) {
+    e.preventDefault()
+  } else {
+    e.returnValue = false
+  }
+}
+```
 
 ## 事件流
 - 事件捕获，处于目标阶段，事件冒泡
