@@ -59,3 +59,22 @@ Promise.resolve(3).then(num => {
     console.log(3)
 */
 ```
+```javascript
+  obtn = document.querySelector('#btn')
+  obtn.addEventListener('click', () => {
+    console.log(1)
+    Promise.resolve('m1').then(str) => {
+      console.log(str)
+    }
+  }. false)
+
+  obtn.addEventListener('click', () => {
+    console.log(2)
+    Promise.resolve('m2').then(str) => {
+      console.log(str)
+    }
+  }. false)
+
+  // 如果是通过obtn.click()，可以理解为直接在主线程直接同时调用click的回调
+  // 结果 1 2 m1 m2
+```

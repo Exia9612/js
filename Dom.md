@@ -233,36 +233,191 @@ function pagePos(e) {
 ```
 
 #### 鼠标事件
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style type="text/css">
+    .body {
+      margin: 0;
+    }
+    
+    a {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100px;
+      height: 100px;
+      background-color: orange;
+    }
+
+    div {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100px;
+      height: 100px;
+      background-color: lightblue;
+    }
+  </style>
+</head>
+<body>
+  <a href="javascript:;"></a>
+  <div></div>
+  <script src="./utils.js"></script>
+  <script src="./dragNclick.js"></script>
+  <script>
+    var olink = document.getElementsByTagName('a')[0],
+        oMenu = document.getElementsByTagName('div')[0]
+    olink.dragNclick(oMenu, function () {
+      window.open('http://www.baidu.com')
+    })
+  </script>
+</body>
+</html>
+```
 ```javascript
 // **拖拽元素**
-function elemDrag(elem) {
-  var x,
-      y
+Element.prototype.dragNclick = (function(menu, elemClick) {
+  var sTime = 0,
+      eTime = 0,
+      oPos = [],
+      cbTime = 0,
+      ceTime = 0,
+      counter = 0,
+      timer = null;
+      wWidth = getViewPort().width,
+      wHeight = getViewPort().height,
+      eleWidth = getStyles(this, 'width'),
+      eleHeight = getStyles(this, 'height'),
+      mWidth = getStyles(menu, 'width'),
+      mHeight = getStyles(menu, 'height');
 
-  addEvent(elem, 'mousedown', function (e) {
-    var e = e || window.event,
-    x = pagePos(e).X - getStyles(elem, 'left'),
-    y = pagePos(e).Y - getStyles(elem, 'top')
+  function drag() {
+    var x,
+        y,
+        _self = this
+  
+    addEvent(this, 'mousedown', function (e) {
+      console.log(e)
+      var e = e || window.event,
+          btnCode = e.btnCode;
 
-    addEvent(document, 'mousemove', mouseMove);
-    addEvent(document, 'mouseup', mouseUp);
-    cancelBubble(e);
-    preventDefaultEvent(e)
-  })
+      if (btnCode === 2) {
+        var mLeft = pagePos(e).X,
+            mTop = pagePos(e).Y;
+        
+        if (mLeft <= 0) {
+          mLeft = 0;
+        } else if (mLeft >= wWidth - mLeft) {
+          mLeft = pagePos(e).X - mWidth
+        }
 
-  function mouseMove(e) {
-    var e = e || window.event;
-    elem.style.top = pagePos(e).Y - y + 'px';
-    elem.style.left = pagePos(e).X - x + 'px';
+        if (mTop <= 0) {
+          mTop = 0;
+        } else if (mTop >= wHeight - mHeight) {
+          mTop = pagePos(e).Y - mHeight
+        }
+
+        menu.style.left = mLeft + 'px';
+        menu.style.top = mTop + 'px';
+        menu.style.display = 'block';
+      } else if (btnCode === 0) {
+        sTime = new Date().getTime()
+        oPos = [getStyles(_self, 'left'), getStyles(_self, 'top')]
+        menu.style.display = 'none'
+
+        x = pagePos(e).X - getStyles(_self, 'left');
+        y = pagePos(e).Y - getStyles(_self, 'top');
+    
+        addEvent(document, 'mousemove', mouseMove);
+        addEvent(document, 'mouseup', mouseUp);
+        cancelBubble(e);
+        preventDefaultEvent(e)
+      }
+    })
+
+    addEvent(document, 'contextmenu', function (e) {
+      var e = e || window.event;
+      preventDefaultEvent(e)
+    })
+
+    // 鼠标点击menu外时，不显示menu
+    addEvent(document, 'click', function (e) {
+      menu.style.display = 'block'
+    })
+    // 点击menu时阻止事件冒泡
+    addEvent(menu, 'click', function (e) {
+      var e = e || window.event;
+      cancelBubble(e)
+    })
+  
+    function mouseMove(e) {
+      var e = e || window.event,
+          eleLeft = pagePos(e).X - x,
+          eleTop = pagePos(e).Y - y;
+      
+      if (eleLeft <= 0) {
+        eleLeft = 0;
+      } else if (eleLeft >= wWidth - eleWidth) {
+        eleLeft = wWidth - eleWidth - 1
+      }
+
+      if (eleTop <= 0) {
+        eleTop = 0;
+      } else if (eleTop >= wHeight - eleHeight) {
+        eleTop = wHeight - eleHeight - 1
+      }
+
+      _self.style.top = eleTop + 'px';
+      _self.style.left = eleLeft + 'px';
+    }
+  
+    function mouseUp(e) {
+      var e = e || window.event;
+      eTime = new Date().getTime()
+
+      if (eTime - sTime < 100) {
+        // click
+        // 防止click与拖拽事件重合
+        _self.style.top = oPos[1] + 'px';
+        _self.style.left = oPos[0] + 'px';
+        
+        counter++;
+        if (counter === 1) {
+          cbTime = new Date().getTime();
+        }
+
+        if (counter === 2) {
+          ceTime = new Date().getTime();
+        }
+
+        if (cbTime && ceTime && (ceTime - cbTime < 200)) {
+          // 双击
+          elemClick()
+        }
+
+        timer = setTimeout(function () {
+          cbTime = 0
+          ceTime = 0
+          counter = 0
+          clearTimeout(timer)
+        }, 500)
+      }
+
+      removeEvent(document, 'mousemove', mouseMove);
+      removeEvent(document, 'mouseup', mouseUp);
+    }
   }
 
-  function mouseUp(e) {
-    var e = e || window.event;
-    removeEvent(document, 'mousemove', mouseMove);
-    removeEvent(document, 'mouseup', mouseUp);
-  }
-}
+  drag.call(this);
+});
 ```
+  - 左、中、右键通过event.btnCode(0 1 2)区分，click事件没有该属性，mousedown和mouseup有该属性。使用IE10及以上
 
 ## 浏览器怪异模式和标准模式
 document.compatMode CSS1Compat(标准模式) BackCompat(怪异模式)
@@ -396,3 +551,11 @@ elem.onclick = function (event) {
   console.log(tar)
 }
 ```
+
+## 鼠标移入移出事件
+
+### mouseover mouseout
+- 对绑定元素和子元素都生效
+
+### mouseenter mouseleave
+- 只对绑定元素生效

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <link rel="stylesheet" href="index.css"></link>
+</head>
+<body>
+  <div class="wrap">
+    <ul class="list"> 
+      <li class="list-item active">
+        <div class="card">
+          <div class="title">
+            <a href="">这是一个title 这是一个title 这是一个title 这是一个title 这是一个title</a>
+          </div>
+          <div class="price">
+            $2000.00
+          </div>
+          <div class="img">
+            <a href="">
+              <img src="./img/1.png" alt="">
+            </a>
+          </div>
+        </div>
+      </li>
+      <li class="list-item">
+        <div class="card">
+          <div class="title">
+            <a href="">这是一个title 这是一个title 这是一个title 这是一个title 这是一个title</a>
+          </div>
+          <div class="price">
+            $2200.00
+          </div>
+          <div class="img">
+            <a href="">
+              <img src="./img/2.png" alt="">
+            </a>
+          </div>
+        </div>
+      </li>
+      <li class="list-item">
+        <div class="card">
+          <div class="title">
+            <a href="">这是一个title 这是一个title 这是一个title 这是一个title 这是一个title</a>
+          </div>
+          <div class="price">
+            $2400.00
+          </div>
+          <div class="img">
+            <a href="">
+              <img src="./img/3.png" alt="">
+            </a>
+          </div>
+        </div>
+      </li>
+      <li class="list-item">
+        <div class="card">
+          <div class="title">
+            <a href="">这是一个title 这是一个title 这是一个title 这是一个title 这是一个title</a>
+          </div>
+          <div class="price">
+            $2500.00
+          </div>
+          <div class="img">
+            <a href="">
+              <img src="./img/4.png" alt="">
+            </a>
+          </div>
+        </div>
+      </li>
+      <li class="list-item">
+        <div class="card">
+          <div class="title">
+            <a href="">这是一个title 这是一个title 这是一个title 这是一个title 这是一个title</a>
+          </div>
+          <div class="price">
+            $2600.00
+          </div>
+          <div class="img">
+            <a href="">
+              <img src="./img/5.png" alt="">
+            </a>
+          </div>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <script src="utils.js"></script>
+  <script src="index.js"></script>
+  <script>
+    function domReady(fn) {
+      if (document.addEventListener) {
+        document.addEventListener('DOMContentLoaded', function () {
+          // DOMContentLoaded事件只用触发一次，触发后执行fn应该删除
+          document.removeEventListener('DOMContentLoaded', arguments.callee, false)
+        }, false)
+        fn()
+      } else if (document.attachEvent) {
+        document.attachEvent('onreadystatechange', function () {
+          if (this.readyState === 'complete') {
+            document.detachEvent('onreadystatechange', arguments.callee)
+            fn()
+          }
+        })
+      }
+
+      if (document.documentElement.doScroll && typeof(window.frameElement) === 'undefined') {
+        try {
+          document.documentElement.doScroll('left')
+        } catch (error) {
+          return setTimeout(arguments.callee, 20)
+        }
+        fn()
+      }
+    }
+  </script>
+</body>
+</html>
