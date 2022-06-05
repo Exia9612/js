@@ -77,4 +77,68 @@ Promise.resolve(3).then(num => {
 
   // 如果是通过obtn.click()，可以理解为直接在主线程直接同时调用click的回调
   // 结果 1 2 m1 m2
+
+  // 如果是用户调用则是click回调会被推入宏任务队列，然后按照时间还顺序执行
+  // 结果 1 m1 2 m2
 ```
+
+# 宏任务与微任务
+## 宏任务
+  ### setTimeout setImmediate
+   - setImmediat仅在node edge中支持
+   - 在node中setImmediate的执行是在poll phase完成后。且在IO cycle中执行是总是领先于其它定时器
+  
+  ### requestAnimation setInterval
+   - requestAnimation 在下一次浏览器重绘之前调用调用一次 setInterval调用多次
+   - requestAnimation 窗口最吓化时会暂停执行，setInterval不会
+   - requestAnimation 对所有dom操作统一计算执行一次并绘制一次 setInterval 多次dom操作会进行多次计算和绘制
+   - setInterval中若间隔小于刷新率会，对于dom操作执行很多无意义的重绘与重排
+
+# NodeJs
+# 基本
+ 1. 基于chrome v8引擎的js运行环境
+ 2. js运行在服务端
+ 3. node运行环境只包含ES,node和nodeAPI模块
+ 4. 事件驱动（事件完成通知，异步）
+    - 通过回调通知
+ 5. 非阻塞式I/O(异步的输入输出)
+ 6. 外部依赖包与某块管理器npm
+ 7. 主线程交替处理任务(只有一个主线程)
+ 8. 擅长：I/O操作：文件读取，网络请求，数据库操作
+    不擅长：CPU密集型操作 高性能逻辑运算 解压缩 数据分析(没有专门的线程执行高性能运算)
+ 9. node具体工作
+    - 前后端分离
+    - 服务端渲染
+    - 前端工程化服务与工具
+    ![Image text](./img/webpack.png)
+## 多线程与主线程交替执行
+  ![Image text](./img/多线程模型.png)
+  ![Image text](./img/node1.png)
+## JS单线程
+  js主线程是单线程(运行代码)
+  防止多个线程造成dom操作与渲染的任务冲突
+  node中沿用了主线程与单线程的方式
+  多线程与单线程的优劣
+  - 多线程要频繁切换任务上下文，单线程不需要
+  - 多线程处理多个任务时需要管理锁机制，单线程不需要
+  
+  ### 同步阻塞
+  ![Image text](./img/同步阻塞.png)
+  ```javascript
+  const { readFileSync } = require('fs')
+  // 同步执行，等待读取结果后再往下执行，阻塞代码
+  const file1 = readFileSync('1.txt')
+  const file2 = readFileSync('2.txt')
+  ```
+  ### 异步非阻塞
+  ![Image text](./img/异步非阻塞.png)
+  ```javascript
+  const { readFile } = require('fs')
+  // 同步执行，等待读取结果回调，不阻塞代码继续执行
+  const file1 = readFile('1.txt'， 'utf-8', function (error, data) {
+    console.log(data)
+  })
+  const file2 = readFile('2.txt'， 'utf-8', function (error, data) {
+    console.log(data)
+  })
+  ```

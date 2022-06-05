@@ -73,30 +73,30 @@
 10. async script加载并执行完成，img等资源加载完毕，window.onload事件才能触发 document.readyState = 'complete'
 ```javascript
 function domReady(fn) {
-      if (document.addEventListener) {
-        document.addEventListener('DOMContentLoaded', function () {
-          // DOMContentLoaded事件只用触发一次，触发后执行fn应该删除
-          document.removeEventListener('DOMContentLoaded', arguments.callee, false)
-        }, false)
+  if (document.addEventListener) {
+    document.addEventListener('DOMContentLoaded', function () {
+      // DOMContentLoaded事件只用触发一次，触发后执行fn应该删除
+      document.removeEventListener('DOMContentLoaded', arguments.callee, false)
+    }, false)
+    fn()
+  } else if (document.attachEvent) {
+    document.attachEvent('onreadystatechange', function () {
+      if (this.readyState === 'complete') {
+        document.detachEvent('onreadystatechange', arguments.callee)
         fn()
-      } else if (document.attachEvent) {
-        document.attachEvent('onreadystatechange', function () {
-          if (this.readyState === 'complete') {
-            document.detachEvent('onreadystatechange', arguments.callee)
-            fn()
-          }
-        })
       }
+    })
+  }
 
-      if (document.documentElement.doScroll && typeof(window.frameElement) === 'undefined') {
-        try {
-          document.documentElement.doScroll('left')
-        } catch (error) {
-          return setTimeout(arguments.callee, 20)
-        }
-        fn()
-      }
+  if (document.documentElement.doScroll && typeof(window.frameElement) === 'undefined') {
+    try {
+      document.documentElement.doScroll('left')
+    } catch (error) {
+      return setTimeout(arguments.callee, 20)
     }
+    fn()
+  }
+}
 ```
 
 # 浏览器进程
