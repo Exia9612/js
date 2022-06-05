@@ -141,6 +141,7 @@ Promise.resolve(3).then(num => {
   const file2 = readFile('2.txt'， 'utf-8', function (error, data) {
     console.log(data)
   })
+<<<<<<< HEAD
   ```
 
   ## Node事件环·
@@ -160,3 +161,6 @@ Promise.resolve(3).then(num => {
   4. POll：检查新的I/O事件与I/O回调
   5. Check：setImmediate
   6. Close callbacks：关闭的回调函数(内部机制使用)
+=======
+  ```
+>>>>>>> 63105d1efb4ec82ddeeae7d1037b70495ee1875e
