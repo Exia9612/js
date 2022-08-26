@@ -141,7 +141,6 @@ Promise.resolve(3).then(num => {
   const file2 = readFile('2.txt'， 'utf-8', function (error, data) {
     console.log(data)
   })
-<<<<<<< HEAD
   ```
 
   ## Node事件环·
@@ -161,6 +160,48 @@ Promise.resolve(3).then(num => {
   4. POll：检查新的I/O事件与I/O回调
   5. Check：setImmediate
   6. Close callbacks：关闭的回调函数(内部机制使用)
-=======
+
+  #### 事件环案例
+  ```javascript
+  Promise.resolve().then(res => {
+    console.log(1)
+  })
+
+  //nextTick优先于Promise.then
+  process.nextTick(() => {
+    console.log(2)
+  })
+
+  console.log('start')
+
+  readFile('1.txt', 'utf-8', () => {
+    setTimeout(() => {
+      console.log(3)
+    })
+
+    process.nextTick(() => {
+      console.log(4)
+    })
+
+    setImmediate(() => {
+      console.log(5)
+    })
+  })
+
+  console.log(6)
+
+  setTimeout(() => {
+    console.log(7)
+  })
+
+  setImmediate(() => {
+    console.log(8)
+  })
+
+  console.log('end')
+
+  /*
+  start 6 end 2 1
+  */
   ```
->>>>>>> 63105d1efb4ec82ddeeae7d1037b70495ee1875e
+  ![Image text](./img/node事件环案例1.png)
