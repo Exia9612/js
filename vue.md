@@ -276,6 +276,177 @@ function trigger(target, key, value) {
   effectsToRun.forEach(effectFn => effectFn())
 }
 ```
+## 响应式数据改进
+### 嵌套effect和effect栈
+我们希望effect可以嵌套执行
+```javascript
+const data = {
+  foo: true,
+  bar: true
+}
+
+effect(function effectFn1() => {
+  console.log('effectFn1 execute')
+  effect (function effectFn2() => {
+    console.log('effectFn2 execute')
+    obj.bar
+  })
+  obj.foo
+})
+```
+我们希望在依赖收集容器中有这样的关系
+```
+  data -> bar -> effectFn2
+       -> foo -> effectFn1
+```
+修改obj.bar的操作只会触发effectFn2，修改obj.foo的操作会触发effectFn1，同时在effectFn1中执行effectFn2。但是现有的effect实现并不能满足需求
+```javascript
+let activeEffect
+
+function effect(fn) {
+  const effectFn = () {
+    cleanup(effectFn);
+    activeEffect = effectFn
+    fn()
+  }
+
+  // 保存收集effect的依赖收集容器
+  effectFn.deps = []
+  effectFn()
+}
+```
+上述代码存在的问题是内层effectFn执行时会覆盖activeEffect，当内层effectFn执行完毕后，外层effectFn执行，但这时activeEffect已经被修改为内层effectFn，依赖收集错误。改进代码如下
+```javascript
+let activeEffect
+const effectStack = []
+
+function effect(fn) {
+  const effectFn = () {
+    cleanup(effectFn);
+    activeEffect = effectFn;
+    effectStack.push(activeEffect)
+    fn();
+    effectStack.pop();
+    activeEffect = effectStack[effectStack.length - 1]
+  }
+
+  // 保存收集effect的依赖收集容器
+  effectFn.deps = []
+  effectFn()
+}
+```
+
+### 避免无限递归循环
+下面的代码会引起调用栈溢出，原因是因为在读取obj.foo时会track依赖，然后执行obj.foo的写操作触发trigger操作，此时effectFn还没有执行完成就被从依赖收集容器中取出再执行，就会引发栈溢出
+```javascript
+effect(() => obj.foo = obj.foo + 1)
+```
+解决方法
+```javascript
+function trigger(target, key, value) {
+  const depsMap = bucket.get(target)
+  if (!depsMap) return
+
+  const effects = depsMap.get(key)
+  // 避免trigger陷入无限循环，因为effects集合中删除一个元素再添加回来时，若forEach没有结束，set重新访问一次该元素
+  const effectsToRun = new Set()
+  effects && effects.forEach(effectFn => {
+    if (effectFn !== activeEffect) {
+      effectsToRun.add(effectFn)
+    }
+  })
+
+  effectsToRun.forEach(fn => fn())
+}
+```
+
+### 调度执行
+- 什么时候执行依赖
+```javascript
+let activeEffect
+const effectStack = []
+
+function effect(fn, options) {
+  const effectFn = () {
+    cleanup(effectFn);
+    activeEffect = effectFn;
+    effectStack.push(activeEffect)
+    fn();
+    effectStack.pop();
+    activeEffect = effectStack[effectStack.length - 1]
+  }
+
+  // 保存收集effect的依赖收集容器
+  effectFn.deps = []
+  effectFn.options = options
+  effectFn()
+}
+
+function trigger(target, key, value) {
+  const depsMap = bucket.get(target)
+  if (!depsMap) return
+
+  const effects = depsMap.get(key)
+  // 避免trigger陷入无限循环，因为effects集合中删除一个元素再添加回来时，若forEach没有结束，set重新访问一次该元素
+  const effectsToRun = new Set()
+  effects && effects.forEach(effectFn => {
+    if (effectFn !== activeEffect) {
+      effectsToRun.add(effectFn)
+    }
+  })
+
+  effectsToRun.forEach(effectFn => {
+    if (effectFn.options.scheduler) {
+      effectFn.options.scheduler(effectFn)
+    } else {
+      effectFn()
+    }
+  })
+}
+
+effect(
+  () => console.log(obj.foo),
+  {
+    scheduler(fn) {
+      // 在宏任务重执行副作用函数而不是同步执行了
+      setTimeout(() => {
+        fn()
+      }, 1000);
+    }
+  }
+)
+```
+- 依赖执行次数
+```javascript
+const jobQueue = new Set()
+let p = new Promise.resolve()
+let isFlushing = false
+
+function flushJob() {
+  if (isFlushing) return
+
+  isFlushing = true
+  p.then(() => {
+    jobQueue.forEach(job => job())
+  }).finally(() => {
+    isFlushing = false
+  })
+}
+
+effect(
+  () => console.log(obj.foo), //obj.foo初始值为1
+  {
+    scheduler(fn) {
+      jobQueue.add(fn)
+      flushJob()
+    }
+  }
+)
+
+obj.foo++
+obj.foo++
+// 结果只会打印初始值和最终结果，1 3
+```
 
 
 
