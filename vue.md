@@ -448,6 +448,97 @@ obj.foo++
 // 结果只会打印初始值和最终结果，1 3
 ```
 
+## 计算属性
+```javascript
+const sumRes = computer(() => obj.foo + obj.bar)
+```
+1. 懒执行：副作用函数在需要的时候才去执行
+2. 缓存：若计算属性依赖的值没有发生变化时，不重新计算，直接返回缓存结果
+3. 支持对包含计算属性的外层副作用函数的重新调用
+```javascript
+const sumRes = computer(() => obj.foo + obj.bar)
+
+effect(function fn() {
+  console.log(sumRes.value)
+})
+
+obj.foo++ // 希望此时fn函数也可以重新触发
+```
+```javascript
+let activeEffect
+const effectStack = []
+
+function effect(fn, options) {
+  const effectFn = () => {
+    clearup(effectFn)
+    activeEffect = effectFn
+    effectStack.push(effectFn)
+    const res = fn()
+    effectStack.pop()
+    activeEffect = effectStack[effectStack.length - 1]
+    return res
+  }
+
+  effectFn.deps = []
+  effectFn.options = options
+
+  if (!options.lazy) {
+    // 解决懒执行问题，抛出副作用函数，交给用户决定执行时机
+    effectFn()
+  }
+  return effectFn
+}
+
+function trigger(target, key) {
+  const depsMap = bucket.get(target)
+  if (!depsMap) return
+
+  const effects = depsMap.get(key)
+  // 避免trigger陷入无限循环，因为effects集合中删除一个元素再添加回来时，若forEach没有结束，set重新访问一次该元素
+  const effectsToRun = new Set()
+  effects && effects.forEach(effectFn => {
+    if (effectFn !== activeEffect) {
+      effectsToRun.add()effectFn
+    }
+  })
+  effectsToRun.forEach(effectFn => {
+    if (effectFn.options.scheduler) {
+      effectFn.options.scheduler(effectFn)
+    } else {
+      effectFn()
+    }
+  })
+}
+
+function computer(getter) {
+  let res // 缓存结果
+  let dirty = true // 缓存结果是否需要重新计算，true时重新计算
+  const effectFn = effect(getter, {
+    lazy: true,
+    scheduler() {
+      dirty = true,
+      // 当计算属性依赖的响应式数据的trigger被触发时，触发计算属性的依赖
+      trigger(obj, 'value')
+    }
+  })
+
+  const obj = {
+    get value() {
+      if (dirty) {
+        res = effectFn()
+        // 计算属性的副作用函数执行完，effectStack的顶层是嵌套的副作用函数
+        dirty = false
+      }
+      // 主动添加依赖，依赖中的副作用函数是外层的副作用函数。
+      track(obj, 'value')
+      return res
+    }
+  }
+
+  return obj
+}
+```
+
 
 
 
