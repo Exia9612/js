@@ -530,6 +530,7 @@ function computer(getter) {
         dirty = false
       }
       // 主动添加依赖，依赖中的副作用函数是外层的副作用函数。
+
       track(obj, 'value')
       return res
     }
@@ -537,6 +538,613 @@ function computer(getter) {
 
   return obj
 }
+```
+
+## watch
+```javascript
+watch(
+  obj,
+  () => console.log('变化了'),
+  {
+    immediate: true
+  }
+)
+```
+- 响应式数据更新后执行回调函数
+- 回调函数可以获取更新前后的值
+```javascript
+// watch仅供参考参考，功能不完善
+function watch(source, cb, options) {
+  let getter
+  if (typeof source === 'function') {
+    getter = source
+  } else {
+    get = () => travser(source)
+  }
+
+  let oldValue, newValue
+
+  const job = () => {
+    newValue = effectFn()
+    cb(oldValue, newValue)
+    oldValue = newValue
+  }
+
+  const effectFn = effect(
+    () => getter(), // 遍历响应式数据中的kv，建立依赖
+    {
+      lazy: true,
+      scheduler: job // 通过scheduler执行回调
+    }
+  )
+
+  if (options.immediate) {
+    job()
+  } else {
+    // 先执行一次，获得oldvalue
+    oldValue = effectFn()
+  }
+}
+```
+- 竟态问题
+```javascript
+let finalData
+
+watch(obj, async () => {
+  finalData = await fetch(...)
+})
+
+/*
+  第一次修改obj => 发送请求a
+  第二次修改obj => 发送请求b
+  请求b先返回 => finalData = b
+  请求a后返回 => finalData = a
+
+  但实际情况是因为b后发送，我们期望finalData的最终值应该是b
+*/
+```
+```javascript
+let finalData
+watch(obj, async (newValue, oldValue, onInvalidate) => {
+  let expire = false
+
+  onInvalidate(() => {
+    expire = true
+  })
+
+  const res = await fetch(...)
+
+  if (!expire) {
+    finalData = res
+  }
+})
+
+function watch(source, cb, options) {
+  let getter
+  if (typeof source === 'function') {
+    getter = source
+  } else {
+    getter = () => travser(source)
+  }
+
+  let oldValue, newValue
+  let clearup
+
+  function onInvalidate(fn) {
+    cleanup = fn
+  }
+
+  const job = () => {
+    newValue = effectFn()
+    cleanup && cleanup()
+    cb(oldValue, newValue, onInvalidate)
+    oldValue = newValue
+  }
+
+  const effectFn = effect(
+    () => getter(),
+    {
+      lazy: true,
+      scheduler: job // 通过scheduler执行回调
+    }
+  )
+
+  if (options.immediate) {
+    job()
+  } else {
+    // 先执行一次，获得oldvalue
+    oldValue = effectFn()
+  }
+}
+
+/*
+  第一次修改obj => 发送请求a - 更新了作用域内的clearup
+  第二次修改obj => 发送请求b - 先调用了a的clearup，将expire设置为true1
+  请求b先返回 => finalData = b - expire为false更新finalData
+  请求a后返回 => finalData = a - expire为true不更新finalData
+*/
+```
+
+# 非原始值的响应式方案
+## Proxy和Reflect
+- Proxy: 使用proxy可以创建一个代理对象，它能够实现对其它对象的代理。
+- Reflect: 任何可以在Proxy拦截器中找到的方法都能够在reflect中找到同名函数。使用Reflect的主要因素是因为它接受第三个参数receiver，可以理解为函数调用过程中的this
+```javascript
+const obj = { foo: 1 }
+
+const obj = {
+  get foo () {
+    return this.foo
+  }
+}
+
+Reflect.get(obj, foo, { foo: 2 }) // 输出 2
+```
+```javascript
+const obj = {
+  foo: 1,
+  get bar () {
+    return this.foo
+  }
+}
+
+const p = new Proxy(obj, {
+  get (target, key) {
+    track(target, key)
+
+    return target[key]
+  }
+})
+
+// 通过obj的代理对象p访问bar时，我们期望p.foo也会与副作用函数建立依赖关系，但是读取bar时的this是obj而不是代理对象p，所以无法建立响应关系
+effect(() => console.log(p.bar))
+
+// 重新定义代理对象
+const p = new Proxy(obj, {
+  get (target, key, reveiver) {
+    track(target, key, reveiver)
+
+    return Refelct.get(target, key, reveiver)
+  }
+})
+```
+## 如何代理Object
+响应式系统应该拦截一切读取操作，以便数据变化时能够正确的触发响应。普通对象的所有读取操作有下列三种情况
+- 访问属性: obj.foo
+```javascript
+const p = new Proxy(obj, {
+  get (target, key, reveiver) {
+    track(target, key, reveiver)
+
+    // 使用Refelct.get拦截访问属性
+    return Refelct.get(target, key, reveiver)
+  }
+})
+```
+- 判断对象或原型上是否有给定的key: key in obj
+```javascript
+const p = new Proxy(obj, {
+  has (target, key) {
+    track(target, key)
+
+    // 使用has拦截in操作
+    return Refelct.has(target, key)
+  }
+})
+```
+- 使用for...in循环遍历对象：for (const key in obj) {...}
+根据js规范，使用for...in遍历数组时，js内部方法会使用ownKeys来获取对象自身拥有的键
+```javascript
+// 使用ownKeys内部方法获取一个对象所有属于自己的键值，这个操作明显不与任何具体的键值绑定，只能拿到目标对象target，所以我们构造一个唯一的key作为标示
+let ITERATE_KEY = Symbol()
+
+const p = new Proxy(obj, {
+  ownKeys (target) {
+    track(target, ITERATE_KEY)
+
+    // 使用has拦截in操作
+    return Refelct.ownKeys(target)
+  }
+
+  deleteProperty(target, key) {
+    const hadKey = Object.propertype.hasOwnProperty.call(target, key)
+    const res = Reflect.deleteProperty(target, key)
+
+    if (res && hadKey) {
+      trigger(target, key, 'DELETE')
+    }
+  }
+})
+
+/*
+  什么时候触发与ITERATE_KEY关联的副作用函数呢
+  对象的键值对数量发生变化时。因为添加或删除属性时会改变for...in遍历次数
+*/
+function trigger(target, key, type) {
+  const depsMap = bucket.get(target)
+  if (!depsMap) return
+
+  const effectFns = depsMap.get(key)
+  const iterateEffects = depsMap.get(ITERATE_KEY)
+  const effectsToRun = new Set()
+
+  effectFns && effectFns.forEach(effectFn => {
+    if (effectFn !== activeEffect) {
+      effectsToRun.add(effectFn)
+    }
+  })
+
+  if (type === 'ADD' || type === 'DELETE') {
+    // 添加属性的时候去触发ITERATE_KEY的依赖
+    iterateEffects && iterateEffects.forEach(effectFn => {
+       if (effectFn !== activeEffect) {
+         effectsToRun.add(effectFn)
+       }
+     })
+  }
+
+  effectsToRun.forEach(effentFn => {
+    if (effectFn.options.scheduler) {
+      effectFn.options.scheduler(effectFn)
+    } else {
+      effectFn()
+    }
+  })
+}
+```
+
+## 合理的触发响应
+- 当值没有被改变时不触发副作用函数
+```javascript
+const p = new Proxy({foo: 1}, {
+  set(target, key, value, reveiver) {
+    const oldValue = Refelct.get(target, key, receiver)
+    const type = Object.propertype.hasOwnProperty.call(target, key) ? 'SET' : 'ADD'
+    const res = Reflect.set(target, key, value, receiver)
+
+    // 判断nan
+    // NaN === NaN false
+    // NaN !== NaN true
+    if (oldValue !== value && (oldValue === oldValue || value === value)) {
+      trigger(target, key, type)
+    }
+
+    return res
+  }
+})
+```
+
+- 合理的处理原型触发
+```javascript
+const obj = {}
+const proto = { bar: 1 }
+const child = reactive(obj)
+const parent = reactive(proto)
+Object.setPrototypeof(child, parent)
+
+effect(() => {
+  console.log(child.bar)
+})
+
+child.bar = 2 //会触发两次依赖
+```
+当在副作用函数中读取child.bar时，会触发依赖收集。但是child上并没有bar属性，所以会在寻找child代理的对象obj的prototype，即proto上寻找。这一操作会被proto的代理对象拦截，所以child.bar和proto.bar都会与副作用函数建立响应。当给child.bar赋值时也会触发parent的set操作，所以依赖会触发两次
+我们希望在不触发原形上的响应，所以需要找到一个方法分辨哪一次是原型上的触发
+```javascript
+// child的set
+set (target, key, newValue, receiver) {
+  // target 是obj
+  // receiver 是obj的代理对象parent
+}
+
+// proto的set
+set (target, key, newValue, receiver) {
+  // target 是obj的原型proto
+  // receiver 因为是child,bar， 所以receiver仍然是obj的代理对象parent
+}
+```
+```javascript
+const p = new Proxy({foo: 1}, {
+  get (target, key, reveiver) {
+    if (key === 'raw') {
+      return target
+    }
+    track(target, key)
+    return Refelct.get(target, key, reveiver)
+  }
+
+  set(target, key, value, reveiver) {
+    const oldValue = Refelct.get(target, key, receiver)
+    const type = Object.propertype.hasOwnProperty.call(target, key) ? 'SET' : 'ADD'
+    const res = Reflect.set(target, key, value, receiver)
+
+    if (target === receiver.raw) {
+      if (oldValue !== value && (oldValue === oldValue || value === value)) {
+        trigger(target, key, type)
+      }
+    }
+
+    return res
+  }
+})
+```
+
+## 浅响应与深响应
+- 深响应
+```javascript
+// obj.foo.bar
+const p = new Proxy({foo: {bar: 1}}, {
+  get (target, key, reveiver) {
+    if (key === 'raw') {
+      return target
+    }
+    track(target, key)
+    const res = Refelct.get(target, key, reveiver)
+    if (typeof res === 'object' && res !== null) {
+      return reactive(res)
+    }
+    return res
+  }
+})
+```
+- 浅响应(shallowReactive)
+```javascript
+function createReactive(obj, isShallow = false) {
+  return new Proxy({foo: {bar: 1}}, {
+    get (target, key, reveiver) {
+      if (key === 'raw') {
+        return target
+      }
+      track(target, key)
+      const res = Refelct.get(target, key, reveiver)
+
+      if (isShallow) {
+        return res
+      }
+      if (typeof res === 'object' && res !== null) {
+        return reactive(res)
+      }
+      return res
+    }
+
+    set(target, key, value, reveiver) {
+      const oldValue = Refelct.get(target, key, receiver)
+      const type = Object.propertype.hasOwnProperty.call(target, key) ? 'SET' : 'ADD'
+      const res = Reflect.set(target, key, value, receiver)
+
+      if (target === receiver.raw) {
+        if (oldValue !== value && (oldValue === oldValue || value === value)) {
+          trigger(target, key, type)
+        }
+      }
+
+      return res
+    }
+  })
+}
+```
+```javascript
+function reactive(obj) {
+  createReactive(obj)
+}
+
+function shallowReactive(obj) {
+  createReactive(obj, true)
+}
+```
+## 只读和浅只读
+我们希望一些数据只是只读的，当用户试图修改它们时会收到一条警告。比如组件的props
+```javascript
+function createReactive(obj, isShallow = false, isReadonly = false) {
+  return new Proxy({foo: {bar: 1}}, {
+    get (target, key, reveiver) {
+      if (key === 'raw') {
+        return target
+      }
+
+      // 如果一个数据是只读的，没有必要建立响应式
+      if (!isReadonly) {
+        track(target, key)
+      }
+      const res = Refelct.get(target, key, reveiver)
+
+      if (isShallow) {
+        return res
+      }
+      if (typeof res === 'object' && res !== null) {
+        // 深只读
+        return isReadonly ? readonly(res) : reactive(res)
+      }
+      return res
+    }
+
+    set(target, key, value, reveiver) {
+      if (isReadonly) {
+        console.warn('readonly')
+        return true
+      }
+
+      const oldValue = Refelct.get(target, key, receiver)
+      const type = Object.propertype.hasOwnProperty.call(target, key) ? 'SET' : 'ADD'
+      const res = Reflect.set(target, key, value, receiver)
+
+      if (target === receiver.raw) {
+        if (oldValue !== value && (oldValue === oldValue || value === value)) {
+          trigger(target, key, type)
+        }
+      }
+
+      return res
+    }
+
+    deleteProperty(target, key) {
+      if (isReadonly) {
+        console.warn('readonly')
+        return true
+      }
+
+      const hasKey = Object.propertype.hasOwnProperty.call(target, key)
+      const res = Refelct.deleteProperty(target, key)
+
+      if (hadKey && res) {
+        trigger(target, key, delete)
+      }
+      return res
+    }
+  })
+}
+```
+```javascript
+function readonly(obj) {
+  createReactive(obj, false, true)
+}
+
+function shallowReadonly(obj) {
+  // 浅只读：不可以修改第一层属性且也没有响应式，深层属性可以修改。获取第一层属性时直接返回被代理对象上的属性
+  createReactive(obj, true, true)
+}
+```
+
+## 代理数组
+数组本质也是对象，只不过数组是一个异质对象(内部方法DefineProperty实现与普通对象不同)。此外数组元素的读取的设置操作也比普通对象丰富。
+数组的读取操作有
+- 通过索引访问数组元素值 arr[0]
+- 访问数组的长度 arr.length
+- 把数组作为对象，使用for...in遍历
+- 使用for...of遍历数组
+- 数组的原型方法，如concat/join/every/some/find/findIndex/include等，以及其他所有不改变数组原型的方法
+数组的写操作
+- 通过索引修改数组元素值：arr[1] = 3
+- 修改数组长度：arr.length = 0
+- 数组的栈方法：push/pop/shift/unshift
+- 修改数组的原型方法：splice/fill/sort
+### 数组的索引与length
+当通过索引赋值时，如果索引大于数组的length，数组会先改变length属性后再赋值。所以当索引大于length时，应该触发关于length的副作用
+```javascript
+const arr = reactive(['foo'])
+
+effect(() => console.log(arr.length))
+
+arr[1] = 'bar' // 上面的副作用函数应该触发
+
+function createReactive(obj, isShallow = false, isReadonly = false) {
+  return new Proxy({foo: {bar: 1}}, {
+    set(target, key, value, reveiver) {
+      if (isReadonly) {
+        console.warn('readonly')
+        return true
+      }
+
+      const oldValue = Refelct.get(target, key, receiver)
+      const type = Array.isArray(target) ?
+        // 当添加的索引大于length时，是add操作
+        Number(key) < target.length ? 'SET' : 'ADD'
+        : Object.propertype.hasOwnProperty.call(target, key) ? 'SET' : 'ADD'
+      const res = Reflect.set(target, key, value, receiver)
+
+      if (target === receiver.raw) {
+        if (oldValue !== value && (oldValue === oldValue || value === value)) {
+          trigger(target, key, type， value)
+        }
+      }
+
+      return res
+    }
+}
+
+function trigger(target, key, type, newValue) {
+  const depsMap = bucket.get(target)
+  if (!depsMap) return
+  //...
+
+  // 数组的add操作改变length，需要触发length的依赖
+  if (type === 'ADD' && Array.isArray(target)) {
+    const lengthEffects = depsMap,get('length')
+    lengthEffects && lengthEffects.forEach(effectFn => {
+      if (effectFn !== activeEffect) {
+        effectsToRun.add(effectFn)
+      }
+    })
+  }
+
+  // 改变数组长度时需要触发所有索引小于长度的依赖
+  if (Array.isArray(target) && key === 'length') {
+    depsMap.forEach((effects, key) => {
+      if (key < newValue) {
+        effects.forEach(effectFn => {
+          if (effectFn !== activeEffect) {
+            effectsToRun.add(effectFn)
+          }
+        })
+      }
+    })
+  }
+
+  effectsToRun.forEach(effectFn => {
+    if (effectFn.options.scheduler) {
+      effectFn.options.scheduler(effectFn)
+    } else {
+      effectFn()
+    }
+  })
+}
+```
+
+### for...in遍历数组
+数组的length改变时，需要触发for...in相关的副作用函数
+```javascript
+const arr = reactive(['foo'])
+
+effect(() => {
+  for const key in arr {
+    console.log(key)
+  }
+})
+
+arr[1] = 'bar' // 上面的副作用函数应该触发
+arr.length = 0
+
+function createReactive(obj, isShallow = false, isReadonly = false) {
+  return new Proxy({foo: {bar: 1}}, {
+    ownKeys(target) {
+      if (Array.isArray(target)) {
+        track(target, 'length')
+      } else {
+        track(target, ITERATE_KEY)
+      }
+      return Refelct.ownKeys(target)
+    }
+  })
+```
+
+### for...of遍历数组
+使用for...of遍历数组时，js内部方法会读取数组的length和数组的索引，这时候就会被proxy拦截并建立响应式，所以上述已经可以满足需求，即建立的for...of和arr.length,arr[index]的响应式关系.
+但是for...of的内部方法还会调用symbol.iterator，为了避免发生意外的错误和性能问题，我们不应该在symbol.iterator与for...of操作间建立依赖关系
+```javascript
+function createReactive(obj, isShallow = false, isReadonly = false) {
+  return new Proxy({foo: {bar: 1}}, {
+    get (target, key, receiver) {
+      if (key === 'raw') {
+        return target
+      }
+      
+      if (!isReadonly && typeof key !== 'symbol') {
+        track(target, key)
+      }
+
+      const res = Refelct.get(target, key)
+
+      if (isShallow) {
+        return res
+      }
+
+      if (typeof res === 'object' && res !== null) {
+        return isReadonly ? readonly(res) : reactive(res)
+      }
+
+      return res
+    }
+  }
 ```
 
 
