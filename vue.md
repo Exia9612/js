@@ -1147,6 +1147,124 @@ function createReactive(obj, isShallow = false, isReadonly = false) {
   }
 ```
 
+### 数组的查找方法(includes, indexOf, lastIndexOf)
+```javascript
+const obj = {}
+const arr = reactive([obj])
+
+// 在响应式数据中查找子元素的响应式
+console.log(arr.includes(arr[0])) // false
+```
+- 在arr.includes的内部实现中，会先读取includes中的参数arr[0]。因为arr本身是响应式数据，所以读取其属性时，如果属性值仍然可以被代理，就返回一个响应式数据。
+- 在includes内部查找中，会依次通过索引取值，在每次取值时又会返回一个响应式数据，但因为两次响应式数据是两个不同的引用，所以includes最终返回false
+改进方法如下
+```javascript
+let reactiveMap = new Map()
+
+function reactive(obj) {
+  let existedReactive = reactiveMap.get(obj)
+
+  if (existedReactive) {
+    return existedReactive
+  }
+
+  const proxy = createReactive(obj)
+  reactiveMap.set(obj, proxy)
+
+  return proxy
+}
+```
+但是includes还有其他问题，因为是在arr中使用includes，所以内部方法每次获取的值都是另一个响应式数据而不是原数据。所以当在响应式数据中查找原数据时也会返回false
+```javascript
+const obj = {}
+const arr = reactive([obj])
+
+// 在响应式中查找原数据的元素
+console.log(arr.includes(obj))
+```
+改进办法是重写includes方法
+```javascript
+const arrayInstrumentations = {}
+
+['includes', 'indexOf', 'lastIndexOf'].forEach(method => {
+  arrayInstrumentations[methods] = function (..args) {
+    const originalMethod = Array.propertype[method]
+
+    // this是代理对象
+    let res = originalMethod.apply(this, args)
+
+    if (!res) {
+      res = originalMethod.apply(this.raw, args)
+    }
+
+     return res
+  }
+})
+
+function createReactive(obj, isShallow = false, isReadonly = false) {
+  return new Proxy(obj, {
+    get (target, key, reveiver) {
+      if (key === 'raw') return target
+
+      if (Array.isArray(target) && arrayInstrumentations.hasOwnProperty(key)) {
+        return Refelct.get(arrayInstrumentations, key, reveiver)
+      }
+
+      if (!isReadonly && typeof key !== 'symbol') track(target, key)
+
+      const res = Refelct.get(target, key)
+
+      if (isShallow) {
+        return res
+      }
+
+      if (typeof res === 'object' && res !== null) {
+        return isReadonly ? readonly(res) : reactive(res)
+      }
+
+      return res
+    }
+  })
+}
+```
+
+### 隐式修改数组长度的方法(pop push shift unshift)
+这些方法的内部实现中有对length属性的读取和设置，所以包含它们的副作用函数会和length建立响应式联系。但这回引起调用栈溢出的问题。
+```javascript
+const arr = reactive([])
+
+effect(() => {
+  arr.push(1)
+})
+
+effect(() => {
+  arr.push(2)
+})
+```
+当第二个副作用函数响应调用时，内部会设置length属性，同时triggrt第一个副作用函数。第一个副作用函数又会trigger自身和第二个副作用函数，引起栈溢出
+根据push的语意，它应该是一个修改操作而不是读取操作，所以不应该经历响应式联系。
+```javascript
+const arrayInstrumentations = {}
+
+['pop', 'push', 'shift', 'unshift'].forEach(method => {
+  arrayInstrumentations[methods] = function (..args) {
+    const originalMethod = Array.propertype[method]
+
+    // this是代理对象
+    shouldTrack = false
+    let res =  originalMethod.apply(this. args)
+    shouldTrack = true
+
+    return res
+  }
+})
+
+function track () {
+  // ...
+  if (!shouldTrack) return
+  // ...
+}
+```
 
 
 
