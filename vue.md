@@ -1266,6 +1266,142 @@ function track () {
 }
 ```
 
+## 代理Map Set
+### 建立响应式联系
+```javascript
+// 建立响应式联系
+const p = reactive(new Set([1,2,3]))
+
+effect(() => {
+  console.log(p.size)
+})
+
+p.add(1) // 期望触发副作用函数
+```
+为了实现上述的响应式逻辑，应该在p.size时添加响应，在p.add时触发该响应
+```javascript
+const mutableInstrumentations = {
+  add(key) {
+    const raw = this.raw
+    const hadKey = target.has(key)
+    const res = raw.add(key)
+    if (!hadKey) {
+      trigger(target, key, 'ADD') // 通过'ADD执行'ITERATE_KEY的依赖
+    }
+    return res
+  },
+  delete(key) {
+    const raw = this.raw
+    const hadKey = target.has(key)
+    const res = raw.delete(key)
+    if (hadKey) {
+      trigger(target, key, 'DELETE') // 通过'ADD执行'ITERATE_KEY的依赖
+    }
+    return res
+  }
+}
+
+function createReactive(obj, isShallow = false, isReadonly = false) {
+  return new Proxy({
+    get(target, key) {
+      if (key === 'size') {
+        track(target, ITERATE_KEY)
+        return Reflect.get(target, key, target)
+      }
+
+      // 当读取的set或map上的属性不是size时，读取原对象的属性并绑定原对象为this，避免调用时this是代理对象
+      return mutableInstrumentations[key]
+    }
+  })
+}
+```
+### 避免数据污染
+把响应式数据设置到原始数据上的行为称为数据污染
+```javascript
+// 建立响应式联系
+const p = reactive(new Set([1,2,3]))
+
+effect(() => {
+  console.log(p.size)
+})
+
+p.add(1) // 期望触发副作用函数
+
+// 数据污染
+const m = new Map()
+const p1 = reactive(m)
+const p2 = reactive(new Map())
+p1.set('p2', p2)
+
+effect(() => {
+  console.log(m.get('p1').size)
+})
+
+// 这里不应该触发size(ITERATE_KEY)相关的响应，因为都是通过原始对象在操作而不是代理
+m.get('p1').set('foo', 1)
+```
+为了实现上述的响应式逻辑，应该在p.size时添加响应，在p.add时触发该响应
+```javascript
+const mutableInstrumentations = {
+  get(key) {
+    const target = this.raw
+    const hasKey = target.has(key)
+    track(target, key)
+    if (hasKey) {
+      const res = target.get(key)
+      return typeof res === 'object' ? reactive(res) : res
+    }
+  },
+  set(key, value) {
+    const target = this.raw
+    const hadKey = target.has(key)
+
+    const oldValue = target.get(key)
+    // 给原始值设置响应式数据的原始值或原始值本身
+    const rawValue = value.raw || value
+    target.set(key, rawValue)
+
+    if (hadKey) {
+      trigger(target, key, 'SET')
+    } else if (oldValue !== value || (oldValue === oldValue && value === value)) {
+      trigger(target, key, 'ADD')
+    }
+  },
+  add(key) {
+    const raw = this.raw
+    const hadKey = target.has(key)
+    const res = raw.add(key)
+    if (!hadKey) {
+      trigger(target, key, 'ADD') // 通过'ADD执行'ITERATE_KEY的依赖
+    }
+    return res
+  },
+  delete(key) {
+    const raw = this.raw
+    const hadKey = target.has(key)
+    const res = raw.delete(key)
+    if (hadKey) {
+      trigger(target, key, 'DELETE') // 通过'ADD执行'ITERATE_KEY的依赖
+    }
+    return res
+  }
+}
+
+function createReactive(obj, isShallow = false, isReadonly = false) {
+  return new Proxy({
+    get(target, key) {
+      if (key === 'size') {
+        track(target, ITERATE_KEY)
+        return Reflect.get(target, key, target)
+      }
+
+      // 当读取的set或map上的属性不是size时，读取原对象的属性并绑定原对象为this，避免调用时this是代理对象
+      return mutableInstrumentations[key]
+    }
+  })
+}
+```
+
 
 
 
