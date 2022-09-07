@@ -1402,6 +1402,125 @@ function createReactive(obj, isShallow = false, isReadonly = false) {
 }
 ```
 
+### 迭代器方法
+#### entries
+```javascript
+const p = reactive(new Map([
+  ['key1', 'value1'],
+  ['key2', 'value2']
+]))
+
+effect(() => {
+  // 需要让代理对象有Symbol.iterator方法
+  // p[Symbol.iterato] === map.entries
+  for (const[key, value] of p) {
+    console.log(key, value)
+  }
+})
+
+p.set('key3', 'value3')
+
+const wrap = (obj) => typeof obj === 'object' && obj !== null ? reactive(obj) : obj
+
+const mutableInstrumentations = {
+  [Symbol.iterator]() {
+    const rawValue = this.raw
+    const itr = rawValue[Symbol.iterator]()
+    track(rawValue, ITERATE_KEY)
+
+    return {
+      next() {
+        const { value, done } = itr.next()
+        return {
+          value: value ? [wrap(value[0]), wrap(value[1])] : value
+          done
+        }
+      }
+    }
+  },
+  entries() {
+    const rawValue = this.raw
+    const itr = rawValue[Symbol.iterator]()
+    track(rawValue, ITERATE_KEY)
+
+    return {
+      // 仅有next方法不够，仅实现了迭代器协议，可以通过next方法遍历，但for...of需要实现
+      next() {
+        const { value, done } = itr.next()
+        return {
+          value: value ? [wrap(value[0]), wrap(value[1])] : value
+          done
+        }
+      },
+      [Symbol.iterator]() {
+        return this
+      }
+    }
+  }
+}
+```
+
+### keys和values
+```javascript
+const wrap = (obj) => typeof obj === 'object' && obj !== null ? reactive(obj) : obj
+
+const mutableInstrumentations = {
+  [Symbol.iterator]() {
+    const rawValue = this.raw
+    const itr = rawValue[Symbol.iterator]()
+    track(rawValue, ITERATE_KEY)
+
+    return {
+      next() {
+        const { value, done } = itr.next()
+        return {
+          value: value ? [wrap(value[0]), wrap(value[1])] : value
+          done
+        }
+      }
+    }
+  },
+  keys() {
+    const rawValue = this.raw
+    const itr = rawValue.keys()
+    track(rawValue, ITERATE_KEY)
+
+    return {
+      // 仅有next方法不够，仅实现了迭代器协议，可以通过next方法遍历，但for...of需要实现
+      next() {
+        const { value, done } = itr.next()
+        return {
+          value: value ? wrap(value): value
+          done
+        }
+      },
+      [Symbol.iterator]() {
+        return this
+      }
+    }
+  }
+}
+```
+
+# 原始值响应方案
+## 引入ref概念
+proxy不能代理原始值。为了规范地代理原始值，我们可以将原始值封装成一个对象后再代理
+```javascript
+function ref(value) {
+  const wrapper = {
+    value
+  }
+
+  // 为了区分ref和reactive代理的响应式
+  Object.defineProperty(wrapper, '__v_isRef', {
+    value: true
+  })
+
+  return reactive(wrapper)
+}
+```
+
+
 
 
 
