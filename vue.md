@@ -1520,6 +1520,148 @@ function ref(value) {
 }
 ```
 
+## 解决响应丢失
+在副作用函数内，通过普通对象访问属性值时无法建立响应联系
+```javascript
+  const obj = reactive({ foo: 1, bar: 2 })
+  const newObj = {
+    ...obj
+  }
+
+  effect(() => {
+    console.lof(newObj.foo)
+  })
+
+  newObj.foo = 3 //不会触发响应
+```
+```javascript
+  function toRef(obj, key) {
+    // obj应该是响应式对象
+    const wrapper = {
+      get value() {
+        return obj[key]
+      }
+    }
+
+    Object.defineProperty(wrapper, '__v_isRef', {
+      value: true
+    })
+
+    return wrapper
+  }
+
+  function toRefs(obj) {
+    const ret = {}
+
+    for (const key in obj) {
+      ret[key] = toRef(obj, key)
+    }
+
+    return ret
+  }
+
+  const obj = reactive({ foo: 1, bar: 2 })
+  const newObj = toRefs(obj)
+```
+
+# 渲染器的设计
+- 通常使用引文renderer表达渲染器，渲染器是一个综合的概念，它包含了渲染(render)功能，即把虚拟dom渲染为特定平台上的真实元素的功能。也包括了其他为了支持渲染功能而实现的函数(patch...)
+- 渲染器是框架性能的核心，直接决定了框架性能
+## 渲染器与响应式数据
+```javascript
+  import { effect, ref } from '@vue/reactivity'
+
+  function renderer(string, container) {
+    container.innerHTML = string
+  }
+
+  const count = ref(1)
+
+  // effect中访问量count，建立了响应式数据与副作用函数间的联系
+  effect(() => {
+    renderer(`<h1>${count}</h1>`, document.querySelector('#app'))
+  })
+
+  count++
+```
+
+## 渲染器的基本概念
+```javascript
+function renderer() {
+  function render(vnode, container) {
+    if (vnode) {
+      patch(container._vnode, vnode, container)
+    } else {
+      if (container._vnode) {
+        container.innerHTML = ''
+      }
+    }
+    container._vnode = vnode
+  }
+
+  return {
+    render
+  }
+}
+```
+
+## 自定义渲染器
+通过封装渲染流程中api来实现自定义渲染器
+```javascript
+function createRenderer(options) {
+  const {
+    createElement,
+    setElementText,
+    insert
+  } = options
+
+  function render(vnode, container) {
+    if (vnode) {
+      patch(container._vnode, vnode, container)
+    } else {
+      if (container._vnode) {
+        container.innerHTML = ''
+      }
+    }
+    container._vnode = vnode
+  }
+
+  function patch(oldVnode, newVnode, container) {
+    if (!oldVnode) {
+      mountElement(newVnode, container)
+    } else {
+      // 新旧vnode对比更新
+    }
+  }
+
+  function mountElement(vnode, container) {
+    const el = createElement(vnode.type)
+    if (typeof vnode.children === 'string') {
+      setElementText(el, vnode.children)
+    }
+    insert(el, container)
+  }
+
+  return {
+    render
+  }
+}
+
+// 自定义渲染器，用户可以自定义渲染过程中需要的api
+const renderer = createRenderer({
+  createElement(tag) {
+    document.createElement(tag)
+  },
+  setElementText(el, text) {
+    el.textContent = text
+  },
+  insert(el, container) {
+    container.appendChild(el)
+  }
+})
+```
+
+
 
 
 
