@@ -1661,6 +1661,289 @@ const renderer = createRenderer({
 })
 ```
 
+# 挂载与更新
+## 挂载子节点和元素属性
+```javascript
+const vnode = {
+  type: 'div',
+  props: {
+    id: 'foo'
+  },
+  children: [
+    {
+      type: 'p',
+      children: 'hello'
+    }
+  ]
+}
+
+function createRenderer(options) {
+  const {
+    createElement,
+    setElementText,
+    insert,
+    patchProps
+  } = options
+
+  function render(vnode, container) {
+    if (vnode) {
+      patch(container._vnode, vnode, container)
+    } else {
+      if (container._vnode) {
+        container.innerHTML = ''
+      }
+    }
+    container._vnode = vnode
+  }
+
+  function patch(oldVnode, newVnode, container) {
+    if (!oldVnode) {
+      mountElement(newVnode, container)
+    } else {
+      // 新旧vnode对比更新
+    }
+  }
+
+  function mountElement(vnode, container) {
+    const el = createElement(vnode.type)
+    if (typeof vnode.children === 'string') {
+      setElementText(el, vnode.children)
+    } else if (Array.isArray(vnode.children)) {
+      vnode.children.forEach(child => {
+        patch(null, child, el)
+      })
+    }
+    
+    if (vnode.props) {
+      for (const key in vnode.props) {
+        patchProps(el, key, null, vnode.props[key])
+      }
+    }
+    insert(el, container)
+  }
+
+  return {
+    render
+  }
+}
+
+// 自定义渲染器
+const renderer = createRenderer({
+  shouldSetAsProps(el, key, value) {
+    // input的form作为dom properties是只读的，因此不能通过设置dom properties的方式设置
+    if (el.tagName === 'INPUT' && key === 'form') return false
+    return key in el
+  },
+  patchProps(el, key, prevValue, nextValue) {
+    if(key === 'class') {
+      // el.className比el.setAttribute和el.classList性能高
+      el.className = nextValue || ''
+    } else if (shouldSetAsProps(el, key, nextValue)) {
+      if (typeof el[key] === 'boolean' && value === '') {
+        el[key] = true
+      } else {
+        el[key] = nextValue 
+      }
+    } else {
+      el.setAttribute(key, nextValue)
+    }
+  }
+})
+```
+
+## 卸载操作
+在原来的渲染函数render中，卸载节点是通过container.innerHtml = '' 实现的，这样做有三点缺陷
+1. 无法执行组件的生命周期函数
+2. 卸载操作发生时无法执行自定义指令
+3. 不会移除dom元素上绑定的指令
+所以为了正确的卸载，应该在vnode和真实元素间建立映射关系，通过dom的api来卸载元素。首先改进mountElement
+```javascript
+function mountElement(vnode, container) {
+  // vnode和真实元素间建立映射关系
+  const el = vnode.el = createElement(vnode.type)
+  if (typeof vnode.children === 'string') {
+    setElementText(el, vnode.children)
+  } else if (Array.isArray(vnode.children)) {
+    vnode.forEach(child => {
+      patch(null, child, rl)
+    })
+  }
+  if (vnode.props) {
+    for (const key in vnode.props) {
+      patchProps(el, key, null, vnode.props[key])
+    }
+  }
+  insert(el, container)
+}
+
+function render(vnode, container) {
+ if (vnode) {
+   patch(container._vnode, vnode, container)
+ } else {
+   if (container._vnode) {
+     unmount(container._vnode)
+   }
+ }
+ container._vnode = vnode
+}
+
+function unmount(vnode) {
+  const parent = vnode.el.parentNode
+  if (parentNode) {
+    parentNode.removeChild(vnode.el)
+  }
+}
+```
+
+## 事件处理
+```javascript
+const vnode = {
+  type: 'p',
+  props: {
+    onClick: [
+      (event) => console.log(event),
+      () => alert('hello')
+    ]
+  },
+  children: 'text'
+}
+
+function patchProps(el, key, prevValue, nextValue) {
+  if (/^on/.test(key)) {
+    const invokers = el._vei || (el._vei = {})
+    const name = key.slice(2).toLowerCase()
+    const invoke = invokers[key]
+    if (nextValue) {
+      if (!invoke) {
+        invoke = el._vei[key] = (e) => {
+          if (Array.isArray(invoke.value)) {
+            invoke.value.forEach(fn => fn(e))
+          } else {
+            invoke.value(e)
+          }
+        }
+      }
+      invoke.value = nextValue
+      el.addEventListener(name, invoke)
+    } else {
+      invoke.value = nextValue
+    }
+  }
+  //....
+}
+```
+
+## 事件冒泡与更新时机问题
+原有的处理事件挂载的逻辑中，会遇见触发事件时间早于绑定时间时间，导致不应该在冒泡中执行的父元素的绑定事件被执行了，代码如下
+```javascript
+import { effect, ref } from vue
+
+const bol = ref(false)
+
+effect(() => {
+  const vnode = {
+    type: 'div',
+    props: {
+      onClick: bol.value ? () => {
+        console.log('father click event') : {}
+      }
+    },
+    children: [
+      {
+        type: 'p',
+        props: {
+          onClick: () => {
+            bol.value = true
+          }
+        },
+        children: 'text'
+      }
+    ]
+  }
+
+  renderer.render(vnode, document.querySelector('#app'))
+})
+```
+上面的代码中，当第一次渲染完毕后，点击p标签，触发的p的点击事件更新了响应式数据bol的值，触发副作用函数执行组件的更新。在更新中为div绑定了原来不存在的点击事件。更新完成后继续执行p的点击事件，执行完成后事件冒泡，出发了本不应该在这一轮有的div的点击事件
+通过观察可以发现，事件触发时间肯定早于事件绑定时间，我们需要屏蔽所有绑定时间晚于事件触发时间的事件处理函数的执行
+```javascript
+function patchProps(el, key, prevValue, nextValue) {
+  if (/^on/.test(key)) {
+    const invokers = el._vei || (el._vei = {})
+    const name = key.slice(2).toLowerCase()
+    const invoke = invokers[key]
+    if (nextValue) {
+      if (!invoke) {
+        invoke = el._vei[key] = (e) => {
+          if (e.timeStamp < invoke.attached) return
+          if (Array.isArray(invoke.value)) {
+            invoke.value.forEach(fn => fn(e))
+          } else {
+            invoke.value(e)
+          }
+        }
+      }
+      invoke.value = nextValue
+      invoke.attached = perfrmance.now() // 高精时间，对不同的浏览器需要做适配
+      el.addEventListener(name, invoke)
+    } else {
+      invoke.value = nextValue
+    }
+  }
+  //....
+}
+```
+## 更新子节点
+虚拟dom的children分为三种情况
+1. 没有子节点，children为null
+2. 子节点为文本节点
+3. 子节点为数组，多种子节点
+因此更新时也分为九种情况，分别是上述三种情况各对应三种情况本身，所以更新子节点时，需要考虑这九种情况
+```javascript
+function patchElement(n1, n2) {
+  const el = n2.el = n1.el
+  const oldProps = n1.props
+  const newProps = n2.props
+
+  for (const key in newProps) {
+    if (newProps[key] !== oldProps[key]) {
+      patchProps(el, key, oldProps[key], newProps[kwy])
+    }
+  }
+
+  for (const key in oldProps) {
+    if (!newProps[key]) {
+      patchProps(el, key, oldProps[key],null)
+    }
+  }
+
+  patchChildren(n1, n2, el)
+}
+
+function patchChildren(n1, n2, container) {
+  if (typeof n2.children === 'string') {
+    if (Array.isArray(n1.children)) {
+      n1.children.forEach(child => unmount(child))
+    }
+    setElementText(container, n2.children)
+  } else if (Array.isArray(n2.children)) {
+    if (Array.isArray(n1.children)) {
+      // diff
+    } else {
+      setElementText(container, '')
+      n2.children.forEach(child => patch(null, child, container))
+    }
+  } else {
+    // 新子节点不存在
+    if (Array.isArray(n1.children)) {
+      // diff
+    } else (typeof n1.children === 'string') {
+      setElementText(container, '')
+    }
+  }
+}
+``` 
+
 
 
 
