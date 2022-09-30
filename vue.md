@@ -1794,6 +1794,22 @@ function unmount(vnode) {
   }
 }
 ```
+## 区分vnode类型
+在组件更新时，需要先检查新旧vnode描述的内容是否一致，只有一致时才需要更新
+```javascript
+function patch(n1, n2, container) {
+  if (n1 && n1.type !== n2.type) {
+    unmount(n1)
+    n1 = null
+  }
+
+  if (!n1) {
+    mountElement(n2. container)
+  } else {
+    patchElement(n1, n2, container)
+  }
+}
+```
 
 ## 事件处理
 ```javascript
@@ -1936,13 +1952,191 @@ function patchChildren(n1, n2, container) {
   } else {
     // 新子节点不存在
     if (Array.isArray(n1.children)) {
-      // diff
+      n1.children.forEach(child => unmount(child))
     } else (typeof n1.children === 'string') {
       setElementText(container, '')
     }
   }
 }
-``` 
+```
+
+## 如何找到并移动子节点
+```javascript
+function patchChildren(n1, n2, container) {
+  if (typeof n2.children === 'string') {
+
+  } else if (Array.isArray(n2.children)) {
+    const oldChildren = n1.children
+    const newChildren = n2.children
+    let lastIndex = 0
+
+    for (let i = 0; i < newChildren.length; i++) {
+      const newVnode = newVnode[i]
+      for (let j = 0; j < oldChildren.length; j++) {
+        const oldVnode = oldVnode[j]
+        if (oldVnode.key === newVnode.key) {
+          patch(oldVnode, newVnode, container)
+          // 新旧节点key相同，是可复用的节点
+          if (j < lastIndex) {
+            // 新节点需要移动
+            const preVnode = oldChildren[j - 1]
+            if (preVnode) {
+              const anchor = preVnode.el.nextSibling
+              // 将新节点插入到需要移动到的老节点的后一个节点位置上
+              insert(newVnode.el, container, anchor)
+            }
+            
+          } else {
+            lastIndex = j
+          }
+          break
+        }
+      }
+    }
+  }
+}
+```
+
+## 添加新增节点和删除旧节点
+```javascript
+function patchChildren(n1, n2, container) {
+  if (typeof n2.children === 'string') {
+
+  } else if (Array.isArray(n2.children)) {
+    const oldChildren = n1.children
+    const newChildren = n2.children
+    let lastIndex = 0
+
+    for (let i = 0; i < newChildren.length; i++) {
+      const newVnode = newVnode[i]
+      let find = false
+      for (let j = 0; j < oldChildren.length; j++) {
+        const oldVnode = oldVnode[j]
+        find = true
+        if (oldVnode.key === newVnode.key) {
+          patch(oldVnode, newVnode, container)
+          // 新旧节点key相同，是可复用的节点
+          if (j < lastIndex) {
+            // 新节点需要移动
+            const preVnode = newChildren[i - 1]
+            if (preVnode) {
+              const anchor = preVnode.el.nextSibling
+              // 将新节点插入到需要移动到的老节点的后一个节点位置上
+              insert(newVnode.el, container, anchor)
+            }
+            
+          } else {
+            lastIndex = j
+          }
+          break
+        }
+      }
+      if (!find) {
+        // newVnode不存在于旧vnode中，需要添加
+        const preVnode = newChildren[i - 1]
+        let anchor = null
+        if (preVnode) {
+          anchor = preVnode.el.nextSibling
+        } else {
+          anchor = container.firstChild
+        }
+        // 不能直接insert(el, container, anchor)，新节点的el还不存在
+        patch(null, newVnode, container, anchor)
+      }
+    }
+
+    for (let j = 0; j < oldVnode.length; j++) {
+      const oldChildren = oldVnode[j]
+      const find = newVnode.find(vnode => vnode.key === oldChildren.key)
+      if (!find) {
+        unmount(oldVnode)
+      }
+    }
+  }
+}
+```
+
+# 双端diff
+简单diff算法因为采用了双循环去对比新旧节点，需要多次dom操作去保证元素的更新后位置的准确。双端diff可以减少dom操作
+```javascript
+function patchChildren(n1, n2, container) {
+  if (typeof n2.children === 'string') {
+    //....
+  } else if (Array.isArray(n2.children)) {
+    pathcKeyedChildren(n1, n2, container)
+  } else {
+    //...
+  }
+}
+
+function pathcKeyedChildren(n1, n2, container) {
+  const oldChildren = n1.children
+  const newChildren = n2.children
+  let oldStartIdx = 0
+  let oldEndIdx = oldChildren.length - 1
+  let newStartIdx = 0
+  let newEndIdx = newChildren.length - 1
+
+  let oldStartVnode = oldChildren[oldStartIdx]
+  let oldEndVnode = oldChildren[oldEndIdx]
+  let newStartIdx = newChildren[newStartIdx]
+  let newEndIdx = newChildren[newEndIdx]
+
+  while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
+    // 开头要判断旧节点是否已经被处理过，处理过的就不在处理
+    if (!oldStartVnode) {
+      oldStartVnode = oldChildren[++oldStartIdx]
+    } else if (!oldEndVnode) {
+      oldEndVnode = oldChildren[--oldEndIdx]
+    }
+
+    if (oldStartVnode.key === newStartVnode.key) {
+      patch(oldStartVnode, newStartVnode, container, null)
+      oldStartVnode = oldChildren[++oldStartIdx]
+      newStartVnode = newChildren[++newStartIdx]
+    } else if (oldEndVnode.key === newEndVnode.key) {
+      patch(oldEndVnode, newEndVnode, container, null)
+      oldEndVnode = oldChildren[--oldEndIdx]
+      newEndIdx = newChildren[--newEndIdx]
+    } else if (oldStartVnode.key === newEndVnode.key) {
+      patch(oldStartVnode, newEndVnode, container)
+      insert(oldStartVnode.el, container, oldEndVnode.el.nextSibling)
+      oldStartVnode = oldChildren[++oldStartIdx]
+      newEndIdx = newChildren[--newEndIdx]
+    } else if (oldEndVnode.key === newStartVnode.key) {
+      patch(oldEndVnode, newStartVnode, container, null)
+      insert(oldEndVnode.el, container, oldStartVnode.el)
+      oldEndVnode = oldChildren[--oldEndIdx]
+      newStartVnode = newChildren[++newStartIdx]
+    } else {
+      // 非理想状况，即上面四种对比没有匹配结果
+      const oldIndex = oldChildren.findIndex(item => item.key === newStartVnode.key)
+      if (oldIndex > 0) {
+        // 此旧节点应的新位置在newStartVnode首位，移动该旧节点到首位
+        patch(oldChildren[oldIndex], newStartVnode, container)
+        insert(oldChildren[oldIndex].el, container, newStartVnode.el)
+        oldChildren[oldIndex] = undefined
+      } else {
+        // 新的节点在旧节点中不存在，应该挂载新节点
+        patch(null, newStartVnode, container, oldStartVnode.el)
+      }
+      newStartVnode = newChildren[++newStartIdx]
+    }
+  }
+
+  // 上一轮对比完成后可能会有新节点
+  if (oldEndIdx < oldStartIdx && newStartIdx <= newEndIdx) {
+    for (let i = newStartIdx; i <= newEndIdx; i++) {
+      patch(null, newChildren[i], container, oldStartVnode.el)
+    }
+  } else if (oldStartIdx <= oldEndIdx && newEndIdx < newStartIdx) {
+    // 旧节点需要删除
+    for (let i = oldStartIdx; i <= oldEndIdx; i++) {
+      unmount(oldChildren[i])
+    }
+  }
+}
+```
 
 
 
